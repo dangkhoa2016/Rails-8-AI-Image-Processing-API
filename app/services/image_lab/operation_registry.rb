@@ -7,6 +7,13 @@ require_relative "operations/crop"
 require_relative "operations/rotate"
 require_relative "operations/flip"
 require_relative "operations/grayscale"
+require_relative "operations/brightness"
+require_relative "operations/contrast"
+require_relative "operations/saturation"
+require_relative "operations/tint"
+require_relative "operations/blur"
+require_relative "operations/sharpen"
+require_relative "operations/background"
 
 module ImageLab
   class OperationRegistry
@@ -17,7 +24,14 @@ module ImageLab
       "crop" => Operations::Crop,
       "rotate" => Operations::Rotate,
       "flip" => Operations::Flip,
-      "grayscale" => Operations::Grayscale
+      "grayscale" => Operations::Grayscale,
+      "brightness" => Operations::Brightness,
+      "contrast" => Operations::Contrast,
+      "saturation" => Operations::Saturation,
+      "tint" => Operations::Tint,
+      "blur" => Operations::Blur,
+      "sharpen" => Operations::Sharpen,
+      "background" => Operations::Background
     }.freeze
 
     def self.available

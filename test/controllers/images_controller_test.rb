@@ -32,7 +32,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal(
       {
         "version" => "v1",
-        "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale],
+        "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale brightness contrast saturation tint blur sharpen background],
         "request_content_type" => "multipart/form-data",
         "response_content_type" => "image/png"
       },
@@ -84,6 +84,14 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "image/png", response.media_type
     assert_equal "2", response.headers.fetch("X-Image-Width")
     assert_equal "2", response.headers.fetch("X-Image-Height")
+  end
+
+  test "processing applies a registered color operation" do
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"brightness","amount":-1.0}]' }, headers: authenticated_headers
+
+    assert_response :success
+    result = Vips::Image.new_from_buffer(response.body, "")
+    assert_equal [ 0.0, 0.0, 0.0 ], result.getpoint(0, 0)
   end
 
   test "processing encodes an explicit WebP quality" do

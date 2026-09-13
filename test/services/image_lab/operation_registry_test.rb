@@ -4,7 +4,7 @@ require "test_helper"
 
 class ImageLab::OperationRegistryTest < ActiveSupport::TestCase
   test "reports public operations and validates an empty operation set" do
-    assert_equal %w[resize_to_fit resize_to_fill crop rotate flip grayscale], ImageLab::OperationRegistry.available
+    assert_equal %w[resize_to_fit resize_to_fill crop rotate flip grayscale brightness contrast saturation tint blur sharpen background], ImageLab::OperationRegistry.available
     assert_equal [], ImageLab::OperationRegistry.validate!([])
   end
 
@@ -38,10 +38,11 @@ class ImageLab::OperationRegistryTest < ActiveSupport::TestCase
   test "resolves the implemented operation classes in request order" do
     resolved = ImageLab::OperationRegistry.resolve!([
       { "op" => "rotate", "degrees" => 90 },
-      { "op" => "grayscale" }
+      { "op" => "brightness", "amount" => 0.1 },
+      { "op" => "background", "color" => "#ffffff" }
     ])
 
-    assert_equal [ ImageLab::Operations::Rotate, ImageLab::Operations::Grayscale ], resolved.map(&:first)
+    assert_equal [ ImageLab::Operations::Rotate, ImageLab::Operations::Brightness, ImageLab::Operations::Background ], resolved.map(&:first)
   end
 
   private
