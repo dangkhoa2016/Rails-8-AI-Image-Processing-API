@@ -1,10 +1,10 @@
-# Image processing HTTP contract (Phase 4)
+# Image processing HTTP contract (v1)
 
 ## Purpose and scope
 
-This document defines the first authenticated HTTP boundary for image processing.
-It deliberately establishes the request and response contract before Phase 5 adds
-central input validation and before later phases add transformation operations.
+This document defines the authenticated HTTP boundary for deterministic image
+processing. Phase 4 established the boundary; Phases 5 through 8 added
+qualified input handling and the currently available transforms.
 
 The contract is version `v1`. It does not add API keys, public access, upload
 persistence, background jobs, or AI functionality.
@@ -23,15 +23,17 @@ Returns the capabilities that are actually available at the time of the request:
 ```json
 {
   "version": "v1",
-  "operations": [],
+  "operations": [
+    "resize_to_fit", "resize_to_fill", "crop", "rotate", "flip", "grayscale",
+    "brightness", "contrast", "saturation", "tint", "blur", "sharpen", "background"
+  ],
   "request_content_type": "multipart/form-data",
   "response_content_type": "image/png"
 }
 ```
 
-The current implemented operations are `resize_to_fit`, `resize_to_fill`,
-`crop`, `rotate`, `flip`, and `grayscale`. The endpoint derives this list from
-the explicit registry and must not advertise another operation.
+The endpoint derives this list from the explicit registry and must not advertise
+another operation.
 
 ### `POST /images/process`
 
@@ -47,6 +49,25 @@ The request uses `multipart/form-data` and reserves these fields:
 A valid request supplies a qualified uploaded image and operations that the
 registry supports. The endpoint decodes and transforms in memory with Vips,
 then encodes the selected output format.
+
+### Color and filter operations
+
+The following Phase 8 operation objects are accepted in the ordered
+`operations` array. Each object must contain exactly the listed fields; JSON
+number values must be finite numbers, not strings or booleans.
+
+| Operation | Fields | Bounds |
+| --- | --- | --- |
+| `brightness`, `contrast`, `saturation` | `amount` | `-1.0..1.0`; zero is unchanged |
+| `tint` | `color`, `strength` | strict `#RRGGBB`; `strength` `0.0..1.0` |
+| `blur` | `sigma` | `0.1..20.0` |
+| `sharpen` | `amount` | `0.0..1.0`; zero is unchanged |
+| `background` | `color` | strict `#RRGGBB`; input must have alpha |
+
+Brightness, contrast, saturation and tint preserve an existing alpha channel.
+`background` is intentional alpha composition: it flattens the image onto the
+opaque RGB color and returns no alpha band. The implementation exposes no raw
+Vips method, coefficient, color-name, shorthand hex, or CSS-color parameter.
 
 Successful responses have:
 
@@ -75,10 +96,10 @@ Contract errors return a single JSON error field:
 }
 ```
 
-Missing `image`, a missing or malformed `operations` value, and a non-empty
-operations array return `422 Unprocessable Entity`. Detailed file limits, format
-allowlists, pixel limits, and decoder-safety rules are intentionally deferred to
-`ImageLab::Input` in Phase 5.
+Missing `image`, a missing or malformed `operations` value, an unsupported
+operation, invalid operation parameter, invalid output setting, or qualified
+input that violates byte/format/decode/dimension/pixel guards returns `422
+Unprocessable Entity`.
 
 ## Test contract
 
@@ -86,14 +107,14 @@ allowlists, pixel limits, and decoder-safety rules are intentionally deferred to
 in-memory PNG bytes and no mocks:
 
 1. unauthenticated capability and process requests return `401`;
-2. authenticated process request without `image` returns `422` and `error`;
-3. malformed `operations` returns `422` and `error`;
-4. a tiny PNG with `operations: []` returns PNG bytes, `Cache-Control: no-store`,
-   and the declared metadata headers;
-5. capabilities returns version `v1` and an empty operations list.
+2. authenticated invalid input and malformed/unsupported operations return `422`;
+3. a tiny PNG processed with a registered color operation returns transformed
+   PNG bytes, `Cache-Control: no-store`, and the declared metadata headers;
+4. capabilities returns exactly the explicit registry set.
 
 ## Explicit non-goals
 
-This phase does not validate upload sizes or content policy, implement named image
-operations, persist uploads/results, enqueue work, expose public capabilities, or
-add AI inference. Those responsibilities belong to later phases.
+This API does not persist uploads/results, enqueue work, expose public
+capabilities, accept remote image URLs, expose arbitrary Vips invocation, apply
+metadata/orientation policy, or add AI inference. Those responsibilities belong
+to later phases.
