@@ -17,6 +17,12 @@ end
 allowed_origins = (allowed_origins || "http://localhost:4000").split(",").map(&:strip).reject(&:empty?)
 
 jwt_auth_header = JwtAuthHeader.name
+image_response_headers = %w[
+  X-Image-Width
+  X-Image-Height
+  X-Image-Format
+  X-Processing-Time-Ms
+]
 
 # Explicitly allow the standard and legacy Beam headers as well as the
 # configured one, so existing browser tooling and mixed environments keep
@@ -39,7 +45,7 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
 
     resource "*",
       headers: allowed_headers,
-      expose: [ jwt_auth_header ],
+      expose: [ jwt_auth_header, *image_response_headers ],
       methods: [ :get, :post, :put, :patch, :delete, :options ]
   end
 end
