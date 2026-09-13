@@ -65,9 +65,12 @@ number values must be finite numbers, not strings or booleans.
 | `background` | `color` | strict `#RRGGBB`; input must have alpha |
 
 Brightness, contrast, saturation and tint preserve an existing alpha channel.
-`background` is intentional alpha composition: it flattens the image onto the
-opaque RGB color and returns no alpha band. The implementation exposes no raw
-Vips method, coefficient, color-name, shorthand hex, or CSS-color parameter.
+For a non-zero color adjustment, color data is converted to sRGB before the
+mapping is applied; `amount: 0` for brightness, contrast, or saturation returns
+the input representation unchanged. `background` is intentional alpha
+composition: it flattens the image onto the opaque RGB color and always returns
+three-band sRGB output. The implementation exposes no raw Vips method,
+coefficient, color-name, shorthand hex, or CSS-color parameter.
 
 Successful responses have:
 

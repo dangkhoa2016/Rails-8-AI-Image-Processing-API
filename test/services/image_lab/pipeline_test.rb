@@ -23,4 +23,16 @@ class ImageLabPipelineTest < ActiveSupport::TestCase
       ImageLab::Pipeline.call(image, [ { "op" => "rotate", "degrees" => 90 } ], max_output_pixels: 3)
     end
   end
+
+  test "chains grayscale and background through the registered pipeline" do
+    image = Vips::Image.new_from_memory([ 100, 150, 200, 128 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+
+    result = ImageLab::Pipeline.call(image, [
+      { "op" => "grayscale" },
+      { "op" => "background", "color" => "#ffffff" }
+    ], max_output_pixels: 10)
+
+    assert_equal 3, result.bands
+    assert_equal [ 200.0, 200.0, 200.0 ], result.getpoint(0, 0)
+  end
 end

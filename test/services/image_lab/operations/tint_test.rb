@@ -19,6 +19,14 @@ class ImageLabOperationsTintTest < ActiveSupport::TestCase
     assert_equal 128.0, result.getpoint(0, 0).last
   end
 
+  test "converts CMYK input to sRGB before tinting" do
+    image = Vips::Image.new_from_memory([ 0, 255, 255, 0 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :cmyk)
+
+    result = ImageLab::Operations::Tint.call(image, { "op" => "tint", "color" => "#000000", "strength" => 0.0 })
+
+    assert_equal image.colourspace(:srgb).getpoint(0, 0), result.getpoint(0, 0)
+  end
+
   test "rejects malformed colors and invalid strengths" do
     image = rgb_image([ 1, 2, 3 ])
 

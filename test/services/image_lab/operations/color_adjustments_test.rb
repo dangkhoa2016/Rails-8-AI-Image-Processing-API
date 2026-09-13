@@ -22,6 +22,27 @@ class ImageLabOperationsColorAdjustmentsTest < ActiveSupport::TestCase
     assert_equal [ 192.0, 192.0, 192.0 ], result.getpoint(0, 0)
   end
 
+  test "brightness and contrast convert CMYK input to sRGB before adjustment" do
+    image = cmyk_image
+
+    brightness = ImageLab::Operations::Brightness.call(image, { "op" => "brightness", "amount" => 0.1 })
+    contrast = ImageLab::Operations::Contrast.call(image, { "op" => "contrast", "amount" => 0.5 })
+
+    assert_equal image.colourspace(:srgb).linear(1, 25.5).getpoint(0, 0), brightness.getpoint(0, 0)
+    assert_equal image.colourspace(:srgb).linear(1.5, -64).getpoint(0, 0), contrast.getpoint(0, 0)
+  end
+
+  test "zero amount leaves grayscale alpha images unchanged" do
+    image = grayscale_alpha_image
+
+    [ [ ImageLab::Operations::Brightness, "brightness" ], [ ImageLab::Operations::Contrast, "contrast" ], [ ImageLab::Operations::Saturation, "saturation" ] ].each do |operation, name|
+      result = operation.call(image, { "op" => name, "amount" => 0.0 })
+
+      assert_equal image.bands, result.bands
+      assert_equal image.write_to_memory, result.write_to_memory
+    end
+  end
+
   test "color adjustments reject invalid amounts and unexpected fields" do
     [
       [ ImageLab::Operations::Brightness, "brightness" ],
@@ -39,5 +60,13 @@ class ImageLabOperationsColorAdjustmentsTest < ActiveSupport::TestCase
 
   def rgb_image(pixel)
     Vips::Image.new_from_memory(pixel.pack("C*"), 1, 1, 3, :uchar).copy(interpretation: :srgb)
+  end
+
+  def cmyk_image
+    Vips::Image.new_from_memory([ 0, 255, 255, 0 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :cmyk)
+  end
+
+  def grayscale_alpha_image
+    Vips::Image.new_from_memory([ 100, 128 ].pack("C*"), 1, 1, 2, :uchar).copy(interpretation: :b_w)
   end
 end

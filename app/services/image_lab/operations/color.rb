@@ -14,12 +14,7 @@ module ImageLab
       end
 
       def self.srgb(image)
-        case image.bands
-        when 1
-          image.copy(interpretation: :b_w).colourspace(:srgb)
-        else
-          image.extract_band(0, n: 3).copy(interpretation: :srgb)
-        end
+        image.colourspace(:srgb)
       end
     end
   end

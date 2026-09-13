@@ -36,6 +36,12 @@ scales about the fixed 128 midpoint. Saturation uses a fixed sRGB-to-HSV-to-sRGB
 conversion and scales the HSV saturation channel; `-1` removes chroma and `1`
 increases it, subject to the output color range.
 
+For every non-zero color adjustment, the non-alpha color bands are converted to
+sRGB before the mapping is applied. This makes CMYK inputs deterministic rather
+than relabeling CMY(K) samples as RGB. The exact zero boundary for brightness,
+contrast, and saturation returns the original Vips image unchanged, including
+its band count, alpha, and color interpretation.
+
 Tint performs a deterministic per-channel blend between sRGB pixels and the
 validated RGB color. Blur uses the bounded Gaussian sigma. Sharpen maps the
 single public amount onto a fixed, internal sharpen profile; Vips's remaining
@@ -43,7 +49,8 @@ sharpen options are never public request parameters.
 
 Color transforms preserve an existing alpha band. `background` is the one
 intentional alpha operation: it validates alpha is present, then flattens onto
-the supplied opaque RGB color and returns a three-band sRGB image.
+the supplied opaque RGB color and returns a three-band sRGB image, including
+when a preceding grayscale operation produced grayscale-plus-alpha input.
 
 ## Integration boundaries
 

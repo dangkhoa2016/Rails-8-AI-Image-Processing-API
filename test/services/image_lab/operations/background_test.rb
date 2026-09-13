@@ -21,4 +21,13 @@ class ImageLabOperationsBackgroundTest < ActiveSupport::TestCase
     assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Background.call(alpha, { "op" => "background", "color" => "blue" }) }
     assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Background.call(alpha, { "op" => "background", "color" => "#ffffff", "extra" => true }) }
   end
+
+  test "flattens grayscale alpha images to three-band sRGB" do
+    image = Vips::Image.new_from_memory([ 146, 128 ].pack("C*"), 1, 1, 2, :uchar).copy(interpretation: :b_w)
+
+    result = ImageLab::Operations::Background.call(image, { "op" => "background", "color" => "#ffffff" })
+
+    assert_equal 3, result.bands
+    assert_equal [ 200.0, 200.0, 200.0 ], result.getpoint(0, 0)
+  end
 end
