@@ -68,6 +68,35 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert json_response.fetch("error").present?
   end
 
+  test "processing maps invalid and unsupported uploads to JSON 422" do
+    post "/images/process", params: { image: upload_from_bytes("".b, "empty.png"), operations: "[]" }, headers: authenticated_headers
+
+    assert_response :unprocessable_entity
+    assert json_response.fetch("error").present?
+
+    tiff = Vips::Image.new_from_memory([ 255, 0, 0 ].pack("C*"), 1, 1, 3, :uchar).write_to_buffer(".tiff")
+    post "/images/process", params: { image: upload_from_bytes(tiff, "image.png"), operations: "[]" }, headers: authenticated_headers
+
+    assert_response :unprocessable_entity
+    assert json_response.fetch("error").present?
+  end
+
+  test "processing maps byte and dimension limits to JSON 422" do
+    with_env("IMAGE_MAX_UPLOAD_BYTES" => "1") do
+      post "/images/process", params: { image: upload_from_bytes(tiny_png_bytes, "tiny.png"), operations: "[]" }, headers: authenticated_headers
+
+      assert_response :unprocessable_entity
+      assert json_response.fetch("error").present?
+    end
+
+    with_env("IMAGE_MAX_DIMENSION" => "1") do
+      post "/images/process", params: { image: upload_from_bytes(two_pixel_png_bytes, "wide.png"), operations: "[]" }, headers: authenticated_headers
+
+      assert_response :unprocessable_entity
+      assert json_response.fetch("error").present?
+    end
+  end
+
   test "processing returns an in-memory PNG with metadata and no-store caching" do
     post "/images/process", params: { image: tiny_png_upload, operations: "[]" }, headers: authenticated_headers
 
@@ -88,13 +117,32 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   def tiny_png_upload
-    png = Vips::Image.new_from_memory([ 255, 0, 0 ].pack("C*"), 1, 1, 3, :uchar).write_to_buffer(".png")
-    tempfile = Tempfile.new([ "phase-4", ".png" ])
+    upload_from_bytes(tiny_png_bytes, "tiny.png")
+  end
+
+  def upload_from_bytes(bytes, filename)
+    tempfile = Tempfile.new([ "phase-5", File.extname(filename) ])
     @upload_tempfiles << tempfile
     tempfile.binmode
-    tempfile.write(png)
+    tempfile.write(bytes)
     tempfile.rewind
 
     Rack::Test::UploadedFile.new(tempfile.path, "image/png", true)
+  end
+
+  def tiny_png_bytes
+    Vips::Image.new_from_memory([ 255, 0, 0 ].pack("C*"), 1, 1, 3, :uchar).write_to_buffer(".png")
+  end
+
+  def two_pixel_png_bytes
+    Vips::Image.new_from_memory([ 255, 0, 0, 0, 255, 0 ].pack("C*"), 2, 1, 3, :uchar).write_to_buffer(".png")
+  end
+
+  def with_env(overrides)
+    previous = overrides.to_h { |key, _value| [ key, ENV[key] ] }
+    ENV.update(overrides)
+    yield
+  ensure
+    previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
   end
 end
