@@ -1,5 +1,8 @@
 # Rails Production Credentials cho Modal
 
+> **Trạng thái:** Project chưa cấu hình Modal deployment. Không tạo hoặc xoay
+> production credentials trước khi giai đoạn deployment sau cho phép.
+
 Modal deployment dùng đúng convention environment-specific credentials của Rails:
 
 ```text

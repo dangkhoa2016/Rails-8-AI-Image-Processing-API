@@ -1,6 +1,10 @@
 # Hướng dẫn Triển khai
 > 🌐 Language / Ngôn ngữ: [English](DEPLOYMENT.md) | **Tiếng Việt**
 
+> **Trạng thái:** Project chưa có deployment nào được provision hoặc chấp nhận.
+> Đây là planning template đã đổi tên từ source snapshot; phải được review và
+> qualification độc lập ở giai đoạn deployment sau.
+
 Hướng dẫn deploy ứng dụng lên server production sử dụng **Kamal** (được tích hợp
 sẵn trong Rails 8).
 
@@ -25,7 +29,7 @@ Mở `config/deploy.yml` và thay thế tất cả placeholder `<...>`:
 
 ```yaml
 # Tên image trên registry
-image: your-dockerhub-username/rails_8_api_authentication
+image: your-dockerhub-username/rails_8_ai_image_processing_api
 
 # IP hoặc hostname của server
 servers:
@@ -93,15 +97,15 @@ Production yêu cầu **bốn URL PostgreSQL riêng biệt**; boot sẽ fail n�
 hoặc trùng bất kỳ URL nào (được enforce bởi
 `config/initializers/production_database_urls.rb`). Tạo và export chúng trong
 **environment của máy deploy (workstation)**, dùng host accessory
-`rails_8_api_authentication-db` trên mạng Kamal và bốn tên database chính xác.
+`rails_8_ai_image_processing_api-db` trên mạng Kamal và bốn tên database chính xác.
 File `.kamal/secrets` được track chỉ chứa tham chiếu (`DATABASE_URL=$DATABASE_URL`);
 không bao giờ để giá trị đã render vào đó:
 
 ```bash
-export DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production"
-export CACHE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_cache"
-export QUEUE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_queue"
-export CABLE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_cable"
+export DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production"
+export CACHE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_cache"
+export QUEUE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_queue"
+export CABLE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_cable"
 ```
 
 Trước `kamal setup` hoặc `kamal deploy`, chạy preflight để fail nhanh nếu thiếu
@@ -125,7 +129,7 @@ dụ thêm `?sslmode=require` vào mỗi URL). Ứng dụng đặt `statement_ti
 Thay vì export bốn URL, initializer có thể tự synthesize chúng từ các biến
 `POSTGRES_*` (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, và tùy chọn `POSTGRES_DB`, mặc định là
-`rails_8_api_authentication_production`). Tiện dùng khi chạy production local.
+`rails_8_ai_image_processing_api_production`). Tiện dùng khi chạy production local.
 Trên Kamal chỉ áp dụng nếu bạn cũng inject các biến `POSTGRES_*` — mặc định
 `config/deploy.yml` chỉ truyền bốn secret `*_DATABASE_URL`. Validation lúc boot
 giống nhau ở cả hai chế độ: thiếu thành phần bắt buộc, URL không hợp lệ, hoặc
@@ -171,7 +175,7 @@ Lệnh này sẽ:
 - Pull image từ registry
 - Boot PostgreSQL accessory và tạo các database primary, cache, queue, và
   cable
-- Tạo volume `rails_8_api_authentication_storage` cho Active Storage uploads
+- Tạo volume `rails_8_ai_image_processing_api_storage` cho Active Storage uploads
   local
 - Khởi động app container + Kamal proxy
 - Xin SSL certificate từ Let's Encrypt
@@ -180,10 +184,10 @@ PostgreSQL accessory (`config/deploy.yml` → `accessories.db`) lưu dữ liệu
 directory `data` của accessory, mount tại `/var/lib/postgresql/data`. Với data
 directory mới, image chính
 thức chạy `config/postgres/init-databases.sql` để tạo
-`rails_8_api_authentication_production_cache`,
-`rails_8_api_authentication_production_queue`, và
-`rails_8_api_authentication_production_cable`. Database primary
-(`rails_8_api_authentication_production`) do chính image tạo. Nếu bạn gắn vào
+`rails_8_ai_image_processing_api_production_cache`,
+`rails_8_ai_image_processing_api_production_queue`, và
+`rails_8_ai_image_processing_api_production_cable`. Database primary
+(`rails_8_ai_image_processing_api_production`) do chính image tạo. Nếu bạn gắn vào
 một data directory đã có sẵn, hãy chạy lại script tương tự một lần bằng `psql` —
 image sẽ không tự chạy lại cho bạn.
 
@@ -282,13 +286,13 @@ database:
 
 | Database | Mục đích | Ghi chú |
 |----------|----------|---------|
-| `rails_8_api_authentication_production` | Database Active Record chính | Quan trọng nhất, sao lưu trước tiên |
-| `rails_8_api_authentication_production_cache` | Solid Cache | Có thể rebuild |
-| `rails_8_api_authentication_production_queue` | Solid Queue | Cần chính sách retention |
-| `rails_8_api_authentication_production_cable` | Solid Cable | Cần chính sách retention |
+| `rails_8_ai_image_processing_api_production` | Database Active Record chính | Quan trọng nhất, sao lưu trước tiên |
+| `rails_8_ai_image_processing_api_production_cache` | Solid Cache | Có thể rebuild |
+| `rails_8_ai_image_processing_api_production_queue` | Solid Queue | Cần chính sách retention |
+| `rails_8_ai_image_processing_api_production_cable` | Solid Cable | Cần chính sách retention |
 
 Upload Active Storage local là một vấn đề riêng: chúng được lưu trong volume
-`rails_8_api_authentication_storage` mount tại `/rails/storage`, không nằm trong
+`rails_8_ai_image_processing_api_storage` mount tại `/rails/storage`, không nằm trong
 PostgreSQL. Hãy sao lưu cả hai.
 
 **Sao lưu và phục hồi:**
@@ -306,14 +310,14 @@ backup_file="primary-$(date -u +%Y%m%dT%H%M%SZ).dump"
 
 # 1. Chạy pg_dump bên trong accessory PostgreSQL qua Kamal, lưu vào volume bền vững
 bin/kamal accessory exec db --reuse \
-  "pg_dump --format=custom --file=/var/lib/postgresql/backups/$backup_file -U rails_auth rails_8_api_authentication_production"
+  "pg_dump --format=custom --file=/var/lib/postgresql/backups/$backup_file -U rails_auth rails_8_ai_image_processing_api_production"
 # Lặp lại cho cache, queue, cable với tên database tương ứng.
 
 # 2. Xác nhận tên container đang chạy, rồi kéo archive về máy deploy qua SSH từ
 #    $POSTGRES_ACCESSORY_HOST (SSH host thật, không phải Docker hostname)
 bin/kamal accessory details db
 # Thay nếu lệnh trên báo tên runtime khác
-accessory_container=rails_8_api_authentication-db
+accessory_container=rails_8_ai_image_processing_api-db
 ssh "$POSTGRES_ACCESSORY_HOST" \
   "docker exec '$accessory_container' cat '/var/lib/postgresql/backups/$backup_file'" \
   > "backups/$backup_file"
@@ -371,7 +375,7 @@ vậy hãy nhân ngân sách primary lên bốn database khi định cỡ server
 **Truy cập database:**
 
 ```bash
-kamal accessory exec db -- psql -U rails_auth rails_8_api_authentication_production
+kamal accessory exec db -- psql -U rails_auth rails_8_ai_image_processing_api_production
 ```
 
 ---
@@ -381,9 +385,9 @@ kamal accessory exec db -- psql -U rails_auth rails_8_api_authentication_product
 Branch này thay SQLite baseline bằng PostgreSQL cho các thay đổi tương lai; nó
 **không** copy các row SQLite đang hoạt động. Một cutover thực sự cần kiểm kê
 row, thứ tự foreign key, reset sequence, count/checksum, diễn tập, cửa sổ
-freeze, và kế hoạch rollback — tất cả nằm ngoài phạm vi. Coi variant SQLite
-(khôi phục được tại tag `baseline-sqlite-v1`) là điểm khôi phục trước migration,
-và chỉ phục hồi bản sao PostgreSQL vào target non-production đã xác minh.
+freeze, và kế hoạch rollback — tất cả nằm ngoài phạm vi. Artifact upstream
+lịch sử không phải điểm khôi phục của project này; chỉ xác định backup và
+rollback mới sau khi project có deployment đã qualification.
 
 ---
 

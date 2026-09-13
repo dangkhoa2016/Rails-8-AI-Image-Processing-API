@@ -1,5 +1,7 @@
 # Deploy lên Modal.com — Public Production-Style Demo
 
+> **Trạng thái:** Đây là production deployment contract đã được Git-track cho public Modal demo. Chỉ chấp nhận production deployment từ checkout `main` sạch hoàn toàn, với `HEAD` đồng thời khớp remote `origin/main` và peeled target của remote tag `v1.0.0`.
+
 > 🌐 Language / Ngôn ngữ: [English](README.md) | **Tiếng Việt**
 
 Recipe này deploy Rails API thành public production-style demo trên Modal.com. Rails tiếp tục dùng `Authorization: Bearer <JWT>` chuẩn.
@@ -9,8 +11,10 @@ Recipe này deploy Rails API thành public production-style demo trên Modal.com
 - public `@modal.web_server(..., requires_proxy_auth=False)`;
 - `min_containers=0`, `max_containers=1`;
 - `buffer_containers=0`, `scaledown_window=60`;
-- CPU-only, `cpu=1.0`, `memory=1024` MiB;
-- Rails/Puma port `4000`, `RAILS_MAX_THREADS=3`;
+- CPU-only, `cpu=2.0`, `memory=10240` MiB;
+- Rails/Puma port `4000`, `WEB_CONCURRENCY=1`, `RAILS_MAX_THREADS=3`;
+- `IMAGE_AI_MAX_CONCURRENCY=1` để AI inference chạy single-flight;
+- read-only Modal Volume `rails-8-ai-image-processing-models` mount tại `/rails/var/models`;
 - `RACK_ATTACK_CACHE_STORE=memory`;
 - `SOLID_QUEUE_IN_PUMA=true`, `JOB_CONCURRENCY=1`;
 - `RAILS_ENV=production`.
@@ -63,7 +67,7 @@ Tạo named secret `rails-api-production` từ JSON file nằm ngoài repository
 - `SMTP_AUTHENTICATION=plain`;
 - `SMTP_SSL=true`;
 - `SMTP_ENABLE_STARTTLS_AUTO=false`;
-- `DEVISE_MAILER_SENDER=Rails 8 API Authentication <contact@<verified sender domain>>`;
+- `DEVISE_MAILER_SENDER=Rails 8 AI Image Processing API <contact@<verified sender domain>>`;
 - `APP_HOST=<public Modal host không có scheme>`;
 - `APP_PROTOCOL=https`;
 - `PUBLIC_DEMO_EMAIL_GUARD=true`.
@@ -76,13 +80,26 @@ modal secret create rails-api-production \
 
 `DEVISE_JWT_SECRET_KEY`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` không là Modal secret key riêng vì chúng nằm trong Rails production encrypted credentials.
 
+## Model volume
+
+Tạo production model volume trước khi deploy và upload đúng các artifact đã qualification vào root của volume:
+
+```text
+rails-8-ai-image-processing-models
+├── BiRefNet-general-epoch_244.onnx
+├── mobile_sam_vit_t_image_encoder.onnx
+└── mobile_sam_prompt_mask_decoder.onnx
+```
+
+Ứng dụng kiểm tra filename, file size và SHA-256 theo committed manifest trước khi load ONNX. Volume được mount read-only tại `/rails/var/models`; deployment không tự tạo hay sửa production model artifact.
+
 ## Deploy
 
 ```bash
 ./deploy/modal/deploy.sh
 ```
 
-Preflight fail nếu `production.yml.enc` bị thiếu, rỗng, chưa Git-track hoặc dirty; nếu `production.key` bị Git-track; nếu Modal authentication/secret lookup thất bại; hoặc deployment files đang dirty.
+Preflight chỉ PASS khi toàn bộ repository sạch, kể cả untracked files; branch hiện tại là `main`; `HEAD` khớp chính xác remote `origin/main`; `HEAD` khớp peeled target của remote tag `v1.0.0`; production credentials được track an toàn; và cả Modal secret lẫn model volume bắt buộc đều đã tồn tại.
 
 Modal chạy `db:prepare` rồi `db:seed` trước Puma. Lần bootstrap đầu tạo admin
 được cấu hình; các cold start lặp lại chỉ tìm admin hiện có và không ghi đè
@@ -114,7 +131,7 @@ export RESEND_API_KEY='re_...'
 unset RESEND_API_KEY
 ```
 
-Script xác minh domain không hỗ trợ bị chặn trước khi gửi, đăng ký với domain hợp lệ được chấp nhận, và Resend báo confirmation message ở trạng thái `delivered`, `opened` hoặc `clicked`. Confirmation vẫn giữ hành vi link hiện có và có thể hoàn tất từ inbox. Email reset mật khẩu thì khác: service API-native này gửi reset token cùng hướng dẫn JSON/curl cho `PUT /users/password`, không gửi browser reset link; hãy dùng API flow đó một cách riêng tư cho password-reset acceptance cuối cùng.
+Script xác minh domain không hỗ trợ bị chặn trước khi gửi, đăng ký với domain hợp lệ được chấp nhận, và Resend báo confirmation message ở trạng thái `delivered`, `opened` hoặc `clicked`. Production acceptance cuối cùng còn bắt buộc human mở HTTPS confirmation link, xác nhận sign-in, gọi `POST /users/password`, kiểm tra reset email đã được giao, hoàn tất API-native `PUT /users/password` bằng token được gửi, xác nhận sign-in bằng password mới và xác nhận password cũ không còn dùng được.
 
 ## Cost và abuse posture
 
