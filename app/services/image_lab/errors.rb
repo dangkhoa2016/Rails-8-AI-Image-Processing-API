@@ -6,5 +6,8 @@ module ImageLab
     class UnsupportedFormat < StandardError; end
     class UploadTooLarge < StandardError; end
     class PixelLimitExceeded < StandardError; end
+    class InvalidOperation < StandardError; end
+    class UnsupportedOperation < StandardError; end
+    class OperationLimitExceeded < StandardError; end
   end
 end
