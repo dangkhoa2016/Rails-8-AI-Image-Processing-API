@@ -32,7 +32,7 @@ secrets = REQUIRED_SECRETS + [
 image = Image.from_dockerfile("./Dockerfile")
 
 pod = Pod(
-    name="rails-8-api-authentication-postgresql",
+    name="rails-8-ai-image-processing-api-postgresql",
     image=image,
     cpu=1,
     memory="1Gi",

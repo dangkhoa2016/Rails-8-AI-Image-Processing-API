@@ -57,7 +57,7 @@ spec = importlib.util.spec_from_file_location("modal_app_under_test", app_path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
-assert records["app_name"] == "rails-8-api-authentication"
+assert records["app_name"] == "rails-8-ai-image-processing-api"
 assert records["dockerfile"][1]["add_python"] == "3.12"
 expected_repo = app_path.parents[2]
 assert pathlib.Path(records["dockerfile"][0]) == expected_repo / "Dockerfile"
@@ -169,7 +169,7 @@ finally:
 
 assert records["dockerfile_calls"] == []
 assert records["debian_slim_calls"] == 1
-assert records["app_name"] == "rails-8-api-authentication"
+assert records["app_name"] == "rails-8-ai-image-processing-api"
 assert "function" in records
 assert records["web_server"] == (4000, {"startup_timeout": 120, "requires_proxy_auth": False})
 PY
@@ -275,7 +275,7 @@ run_deploy_case() {
   case "$mode" in
     success)
       [[ $rc -eq 0 ]] && grep -Fq 'secret list --json' "$log" && \
-        grep -Fq 'deploy deploy/modal/app.py --name rails-8-api-authentication' "$log"
+        grep -Fq 'deploy deploy/modal/app.py --name rails-8-ai-image-processing-api' "$log"
       ;;
     missing_secret)
       [[ $rc -ne 0 ]] && grep -Fq 'missing required Modal secret: rails-api-production' "$output" && \

@@ -1,15 +1,15 @@
 
-docker logs rails_8_api_authentication
-docker build -t rails_8_api_authentication .
+docker logs rails_8_ai_image_processing_api
+docker build -t rails_8_ai_image_processing_api .
 
 
-docker run -it --rm --user root rails_8_api_authentication bash
+docker run -it --rm --user root rails_8_ai_image_processing_api bash
 
 run the image:
-docker run -it --rm rails_8_api_authentication:latest bash
+docker run -it --rm rails_8_ai_image_processing_api:latest bash
 
 ./bin/thrust ./bin/rails server
 
-docker run -p 4000:80 -e RAILS_MASTER_KEY=$(cat config/master.key) --name rails_8_api_authentication rails_8_api_authentication
-docker run -d -p 4000:80 -e RAILS_MASTER_KEY=$(cat config/master.key) --name rails_8_api_authentication rails_8_api_authentication
+docker run -p 4000:80 -e RAILS_MASTER_KEY=$(cat config/master.key) --name rails_8_ai_image_processing_api rails_8_ai_image_processing_api
+docker run -d -p 4000:80 -e RAILS_MASTER_KEY=$(cat config/master.key) --name rails_8_ai_image_processing_api rails_8_ai_image_processing_api
 

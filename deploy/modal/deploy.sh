@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_NAME="rails-8-api-authentication"
+APP_NAME="rails-8-ai-image-processing-api"
 SECRET_NAME="rails-api-production"
 PRODUCTION_CREDENTIALS="config/credentials/production.yml.enc"
 PRODUCTION_KEY="config/credentials/production.key"

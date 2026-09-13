@@ -1,16 +1,20 @@
 # Beam.cloud deployment recipe
 
-This directory contains a sanitized PostgreSQL production-style demo recipe for Beam.cloud. It is not an HA deployment, does not provide an SLA, and does not turn the demo into a multi-tenant production service.
+> **Status:** This is an unconfigured, renamed template. No Beam deployment is
+> an authority for Rails 8 AI Image Processing API.
+
+This directory contains an unqualified Beam.cloud template. It is not an HA
+deployment, does not provide an SLA, and does not turn the project into a
+multi-tenant production service.
 
 ## Source image
 
-The wrapper defaults to the immutable PostgreSQL baseline image:
+Set `RAILS_IMAGE` to an independently published project image after a later
+release process has verified it:
 
 ```text
-ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77
+ghcr.io/<owner>/rails-8-ai-image-processing-api:<verified-version>
 ```
-
-The baseline source commit is `6897c773ec1321401e52c21c63870a72d01ca349`.
 
 ## Beam SDK and deploy runner
 

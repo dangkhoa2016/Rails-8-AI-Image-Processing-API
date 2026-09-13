@@ -2,27 +2,27 @@
 
 SELECT format(
   'CREATE DATABASE %I OWNER %I',
-  'rails_8_api_authentication_production_cache',
+  'rails_8_ai_image_processing_api_production_cache',
   current_user
 )
 WHERE NOT EXISTS (
-  SELECT 1 FROM pg_database WHERE datname = 'rails_8_api_authentication_production_cache'
+  SELECT 1 FROM pg_database WHERE datname = 'rails_8_ai_image_processing_api_production_cache'
 )\gexec
 
 SELECT format(
   'CREATE DATABASE %I OWNER %I',
-  'rails_8_api_authentication_production_queue',
+  'rails_8_ai_image_processing_api_production_queue',
   current_user
 )
 WHERE NOT EXISTS (
-  SELECT 1 FROM pg_database WHERE datname = 'rails_8_api_authentication_production_queue'
+  SELECT 1 FROM pg_database WHERE datname = 'rails_8_ai_image_processing_api_production_queue'
 )\gexec
 
 SELECT format(
   'CREATE DATABASE %I OWNER %I',
-  'rails_8_api_authentication_production_cable',
+  'rails_8_ai_image_processing_api_production_cable',
   current_user
 )
 WHERE NOT EXISTS (
-  SELECT 1 FROM pg_database WHERE datname = 'rails_8_api_authentication_production_cable'
+  SELECT 1 FROM pg_database WHERE datname = 'rails_8_ai_image_processing_api_production_cable'
 )\gexec

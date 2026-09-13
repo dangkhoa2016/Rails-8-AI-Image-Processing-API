@@ -5,7 +5,7 @@ Thank you for considering contributing to this project. Please follow these guid
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/<your-username>/Rails-8-API-Authentication.git`
+2. Clone your fork: `git clone https://github.com/<your-username>/Rails-8-AI-Image-Processing-API.git`
 3. Set up the project:
    ```bash
    bundle install

@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-Please report security vulnerabilities by opening a [GitHub Security Advisory](https://github.com/dangkhoa2016/Rails-8-API-Authentication/security/advisories/new).
+Please report security vulnerabilities by opening a [GitHub Security Advisory](https://github.com/dangkhoa2016/Rails-8-AI-Image-Processing-API/security/advisories/new).
 
 Do NOT report security vulnerabilities via public GitHub Issues.
 

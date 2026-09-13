@@ -48,10 +48,10 @@ class ProductionDatabaseUrlsTest < ActiveSupport::TestCase
     assert ProductionDatabaseUrls.validate!(environment: "production", urls: urls)
 
     synthesized = ProductionDatabaseUrls.synthesize(urls)
-    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_api_authentication_production", synthesized["DATABASE_URL"]
-    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_api_authentication_production_cache", synthesized["CACHE_DATABASE_URL"]
-    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_api_authentication_production_queue", synthesized["QUEUE_DATABASE_URL"]
-    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_api_authentication_production_cable", synthesized["CABLE_DATABASE_URL"]
+    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_ai_image_processing_api_production", synthesized["DATABASE_URL"]
+    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_ai_image_processing_api_production_cache", synthesized["CACHE_DATABASE_URL"]
+    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_ai_image_processing_api_production_queue", synthesized["QUEUE_DATABASE_URL"]
+    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_ai_image_processing_api_production_cable", synthesized["CABLE_DATABASE_URL"]
   end
 
   test "explicit URL wins over POSTGRES_* components" do
@@ -65,7 +65,7 @@ class ProductionDatabaseUrlsTest < ActiveSupport::TestCase
     synthesized = ProductionDatabaseUrls.synthesize(urls)
 
     assert_equal "postgresql://explicit@db.example.com/primary", synthesized["DATABASE_URL"]
-    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_api_authentication_production_cache", synthesized["CACHE_DATABASE_URL"]
+    assert_equal "postgresql://postgres:postgres@127.0.0.1:5432/rails_8_ai_image_processing_api_production_cache", synthesized["CACHE_DATABASE_URL"]
   end
 
   test "POSTGRES_DB overrides the derived base name" do
@@ -170,7 +170,7 @@ class ProductionDatabaseUrlsTest < ActiveSupport::TestCase
 
     url = ProductionDatabaseUrls.synthesize(urls)["DATABASE_URL"]
 
-    assert_equal "postgresql://postgres:secret@[::1]:5432/rails_8_api_authentication_production", url
+    assert_equal "postgresql://postgres:secret@[::1]:5432/rails_8_ai_image_processing_api_production", url
   end
 
   test "rejects URLs with out-of-range ports" do

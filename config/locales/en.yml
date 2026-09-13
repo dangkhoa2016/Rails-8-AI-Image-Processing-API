@@ -47,7 +47,7 @@ en:
     invalid_credentials: Invalid email or password
 
   home:
-    welcome: Welcome to Rails 8 API Authentication
+    welcome: Welcome to Rails 8 AI Image Processing API
 
   refresh_token:
     missing: Refresh token is missing

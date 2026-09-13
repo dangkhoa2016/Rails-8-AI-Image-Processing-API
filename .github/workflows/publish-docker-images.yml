@@ -31,8 +31,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: dangkhoa2016/rails-8-api-authentication
-  IMAGE_SOURCE: https://github.com/dangkhoa2016/Rails-8-API-Authentication
+  IMAGE_NAME: dangkhoa2016/rails-8-ai-image-processing-api
+  IMAGE_SOURCE: https://github.com/dangkhoa2016/Rails-8-AI-Image-Processing-API
   IMAGE_LICENSE: MIT
 
 jobs:
@@ -53,14 +53,14 @@ jobs:
           - variant: postgresql
             ref: baseline/postgresql-v1
             version: postgresql-v1
-            title: Rails 8 API Authentication - PostgreSQL
-            description: Rails 8 API authentication service with Devise, JWT, and PostgreSQL support.
+            title: Rails 8 AI Image Processing API - PostgreSQL
+            description: Rails 8 AI image-processing project retaining the Devise/JWT PostgreSQL authentication baseline.
 
           - variant: sqlite
             ref: baseline/sqlite-v1
             version: sqlite-v1
-            title: Rails 8 API Authentication - SQLite
-            description: Rails 8 API authentication service with Devise, JWT, and SQLite support.
+            title: Rails 8 AI Image Processing API - SQLite
+            description: Rails 8 AI image-processing project retaining the Devise/JWT SQLite authentication baseline.
 
     steps:
       # -----------------------------------------------------------------------
