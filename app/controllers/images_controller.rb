@@ -35,7 +35,7 @@ class ImagesController < ApplicationController
       parse_operations,
       max_output_pixels: ImageLab::OperationRegistry.env_limit("IMAGE_MAX_OUTPUT_PIXELS", 25_000_000)
     )
-    encoded = ImageLab::Operations::Encode.call(image, format: params[:format], quality: params[:quality])
+    encoded = ImageLab::Operations::Encode.call(image, format: params[:format], quality: parse_quality)
 
     response.headers["Cache-Control"] = "no-store"
     set_image_metadata_headers(image, started_at, encoded.format)
@@ -51,6 +51,14 @@ class ImagesController < ApplicationController
     JSON.parse(value)
   rescue JSON::ParserError, TypeError
     nil
+  end
+
+  def parse_quality
+    return if params[:quality].nil?
+
+    Integer(params[:quality], 10)
+  rescue ArgumentError, TypeError
+    raise ImageLab::Errors::InvalidOperation, "quality must be an integer from 1 to 100"
   end
 
   def unprocessable_entity!(message)

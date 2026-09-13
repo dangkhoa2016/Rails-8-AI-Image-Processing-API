@@ -86,6 +86,14 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "2", response.headers.fetch("X-Image-Height")
   end
 
+  test "processing encodes an explicit WebP quality" do
+    post "/images/process", params: { image: tiny_png_upload, operations: "[]", format: "webp", quality: "80" }, headers: authenticated_headers
+
+    assert_response :success
+    assert_equal "image/webp", response.media_type
+    assert_equal "webp", response.headers.fetch("X-Image-Format")
+  end
+
   test "processing maps invalid and unsupported uploads to JSON 422" do
     post "/images/process", params: { image: upload_from_bytes("".b, "empty.png"), operations: "[]" }, headers: authenticated_headers
 
