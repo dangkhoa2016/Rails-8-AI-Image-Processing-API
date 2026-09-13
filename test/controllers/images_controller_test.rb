@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "rack/test"
 require "tempfile"
 require "vips"
 
@@ -94,10 +95,6 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     tempfile.write(png)
     tempfile.rewind
 
-    ActionDispatch::Http::UploadedFile.new(
-      tempfile: tempfile,
-      filename: "tiny.png",
-      type: "image/png"
-    )
+    Rack::Test::UploadedFile.new(tempfile.path, "image/png", true)
   end
 end
