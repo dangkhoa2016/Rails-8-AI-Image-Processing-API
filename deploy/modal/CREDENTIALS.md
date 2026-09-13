@@ -1,5 +1,8 @@
 # Rails Production Credentials for Modal
 
+> **Status:** No Modal deployment is configured for this project. Do not create
+> or rotate production credentials until a later deployment phase authorizes it.
+
 The Modal deployment uses Rails' standard environment-specific production credentials:
 
 ```text

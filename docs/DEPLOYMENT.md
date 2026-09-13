@@ -1,6 +1,10 @@
 # Deployment Guide
 > 🌐 Language / Ngôn ngữ: **English** | [Tiếng Việt](DEPLOYMENT.vi.md)
 
+> **Status:** No deployment has been provisioned or accepted for this project.
+> This is a renamed planning template inherited from the source snapshot; it
+> must be independently reviewed and qualified in a later deployment phase.
+
 This guide explains how to deploy the application to a production server using
 **Kamal** (integrated by default in Rails 8).
 
@@ -25,7 +29,7 @@ Open `config/deploy.yml` and replace all placeholders `<...>`:
 
 ```yaml
 # Image name on the registry
-image: your-dockerhub-username/rails_8_api_authentication
+image: your-dockerhub-username/rails_8_ai_image_processing_api
 
 # Server IP or hostname
 servers:
@@ -93,15 +97,15 @@ Production requires **four distinct PostgreSQL URLs**; boot fails if any is
 missing or duplicated (enforced by
 `config/initializers/production_database_urls.rb`). Construct and export them
 in your **deployment workstation environment**, using the accessory host
-`rails_8_api_authentication-db` on the Kamal network and the four exact database
+`rails_8_ai_image_processing_api-db` on the Kamal network and the four exact database
 names. The tracked `.kamal/secrets` file only holds references
 (`DATABASE_URL=$DATABASE_URL`); never put rendered values there:
 
 ```bash
-export DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production"
-export CACHE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_cache"
-export QUEUE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_queue"
-export CABLE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_api_authentication-db/rails_8_api_authentication_production_cable"
+export DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production"
+export CACHE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_cache"
+export QUEUE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_queue"
+export CABLE_DATABASE_URL="postgresql://rails_auth:${POSTGRES_PASSWORD}@rails_8_ai_image_processing_api-db/rails_8_ai_image_processing_api_production_cable"
 ```
 
 Before `kamal setup` or `kamal deploy`, run a preflight to fail fast if any
@@ -125,7 +129,7 @@ from `POSTGRES_STATEMENT_TIMEOUT` (default `5000ms`) via `config/database.yml`.
 Instead of exporting the four URLs, the initializer can synthesize them from the
 `POSTGRES_*` components (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`,
 `POSTGRES_PASSWORD`, and optionally `POSTGRES_DB`, which defaults to
-`rails_8_api_authentication_production`). This is handy for local production
+`rails_8_ai_image_processing_api_production`). This is handy for local production
 runs. On Kamal it applies only if you also inject the `POSTGRES_*` variables —
 the default `config/deploy.yml` passes just the four `*_DATABASE_URL` secrets.
 The same boot-time validation applies in both modes: a missing required
@@ -171,7 +175,7 @@ This command will:
 * Pull the image from the registry
 * Boot the PostgreSQL accessory and create the primary, cache, queue, and cable
   databases
-* Create volume `rails_8_api_authentication_storage` for local Active Storage
+* Create volume `rails_8_ai_image_processing_api_storage` for local Active Storage
   uploads
 * Start the app container + Kamal proxy
 * Obtain an SSL certificate from Let's Encrypt
@@ -180,10 +184,10 @@ The PostgreSQL accessory (`config/deploy.yml` → `accessories.db`) persists its
 data in the accessory `data` directory mounted at `/var/lib/postgresql/data`.
 On a brand-new data
 directory the official image runs `config/postgres/init-databases.sql` to create
-`rails_8_api_authentication_production_cache`,
-`rails_8_api_authentication_production_queue`, and
-`rails_8_api_authentication_production_cable`. The primary database
-(`rails_8_api_authentication_production`) is created by the image itself. If you
+`rails_8_ai_image_processing_api_production_cache`,
+`rails_8_ai_image_processing_api_production_queue`, and
+`rails_8_ai_image_processing_api_production_cable`. The primary database
+(`rails_8_ai_image_processing_api_production`) is created by the image itself. If you
 ever attach to an existing data directory, run the same script explicitly once
 with `psql` — the image will not re-run it for you.
 
@@ -281,13 +285,13 @@ uses four databases:
 
 | Database | Purpose | Notes |
 |----------|---------|-------|
-| `rails_8_api_authentication_production` | Primary Active Record database | Business-critical, back up first |
-| `rails_8_api_authentication_production_cache` | Solid Cache | Rebuildable |
-| `rails_8_api_authentication_production_queue` | Solid Queue | Retention policy needed |
-| `rails_8_api_authentication_production_cable` | Solid Cable | Retention policy needed |
+| `rails_8_ai_image_processing_api_production` | Primary Active Record database | Business-critical, back up first |
+| `rails_8_ai_image_processing_api_production_cache` | Solid Cache | Rebuildable |
+| `rails_8_ai_image_processing_api_production_queue` | Solid Queue | Retention policy needed |
+| `rails_8_ai_image_processing_api_production_cable` | Solid Cable | Retention policy needed |
 
 Local Active Storage uploads are a separate concern: they persist in volume
-`rails_8_api_authentication_storage` mounted at `/rails/storage`, not in
+`rails_8_ai_image_processing_api_storage` mounted at `/rails/storage`, not in
 PostgreSQL. Back up both.
 
 **Backup and restore:**
@@ -305,14 +309,14 @@ backup_file="primary-$(date -u +%Y%m%dT%H%M%SZ).dump"
 
 # 1. Dump inside the PostgreSQL accessory via Kamal into the persistent volume
 bin/kamal accessory exec db --reuse \
-  "pg_dump --format=custom --file=/var/lib/postgresql/backups/$backup_file -U rails_auth rails_8_api_authentication_production"
+  "pg_dump --format=custom --file=/var/lib/postgresql/backups/$backup_file -U rails_auth rails_8_ai_image_processing_api_production"
 # Repeat for cache, queue, and cable with their database names.
 
 # 2. Confirm the runtime container name, then pull the archive over SSH from
 #    $POSTGRES_ACCESSORY_HOST (the real SSH host, not a Docker hostname)
 bin/kamal accessory details db
 # Replace if the command above reports another runtime name
-accessory_container=rails_8_api_authentication-db
+accessory_container=rails_8_ai_image_processing_api-db
 ssh "$POSTGRES_ACCESSORY_HOST" \
   "docker exec '$accessory_container' cat '/var/lib/postgresql/backups/$backup_file'" \
   > "backups/$backup_file"
@@ -370,7 +374,7 @@ multiply the primary budget across the four databases when sizing the server.
 **Accessing the database:**
 
 ```bash
-kamal accessory exec db -- psql -U rails_auth rails_8_api_authentication_production
+kamal accessory exec db -- psql -U rails_auth rails_8_ai_image_processing_api_production
 ```
 
 ---
@@ -380,9 +384,9 @@ kamal accessory exec db -- psql -U rails_auth rails_8_api_authentication_product
 This branch replaces the SQLite baseline with PostgreSQL going forward; it does
 **not** copy live SQLite rows. A real cutover requires row inventory,
 foreign-key ordering, sequence resets, counts/checksums, a rehearsal, a freeze
-window, and a rollback plan — all out of scope here. Treat the SQLite variant
-(recoverable at the `baseline-sqlite-v1` tag) as the pre-migration recovery
-point, and only restore PostgreSQL backups into verified non-production targets.
+window, and a rollback plan — all out of scope here. Historical upstream
+artifacts are not recovery points for this project; define new backup and
+rollback procedures only after this project has a qualified deployment.
 
 ---
 
