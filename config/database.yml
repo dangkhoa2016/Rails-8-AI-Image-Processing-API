@@ -22,7 +22,7 @@ default: &default
 development:
   <<: *default
 
-  database: <%= ENV.fetch("POSTGRES_DB", "rails_8_api_authentication_development") %>
+  database: <%= ENV.fetch("POSTGRES_DB", "rails_8_ai_image_processing_api_development") %>
 
   # Local development normally has light concurrency.
   pool: <%= ENV.fetch("DEVELOPMENT_DB_POOL", ENV.fetch("RAILS_MAX_THREADS", 5)) %>
@@ -44,7 +44,7 @@ development:
 test:
   <<: *default
 
-  database: <%= ENV.fetch("POSTGRES_TEST_DB", "rails_8_api_authentication_test") %>
+  database: <%= ENV.fetch("POSTGRES_TEST_DB", "rails_8_ai_image_processing_api_test") %>
 
   # Can be increased independently when using parallel tests / CI.
   pool: <%= ENV.fetch("TEST_DB_POOL", ENV.fetch("RAILS_MAX_THREADS", 5)) %>
