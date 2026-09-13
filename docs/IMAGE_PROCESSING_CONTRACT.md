@@ -29,9 +29,9 @@ Returns the capabilities that are actually available at the time of the request:
 }
 ```
 
-`operations` is intentionally empty in Phase 4. The endpoint must not advertise
-`resize_to_fit`, `rotate`, or another operation until that operation is implemented
-and qualified.
+The current implemented operations are `resize_to_fit`, `resize_to_fill`,
+`crop`, `rotate`, `flip`, and `grayscale`. The endpoint derives this list from
+the explicit registry and must not advertise another operation.
 
 ### `POST /images/process`
 
@@ -40,19 +40,19 @@ The request uses `multipart/form-data` and reserves these fields:
 | Field | Phase 4 behavior |
 | --- | --- |
 | `image` | Required uploaded image. |
-| `operations` | Required JSON array. Only `[]` is accepted in Phase 4. |
-| `format` | Reserved for a future output choice; current output is always PNG. |
-| `quality` | Reserved for a future output-quality choice; it has no Phase 4 output effect. |
+| `operations` | Required JSON array of flat operation objects, applied in order. |
+| `format` | Optional exact lower-case `png` (default), `jpeg`, or `webp`. |
+| `quality` | Optional integer `1..100` for JPEG/WebP; defaults to 85 and is invalid for PNG. |
 
-A valid Phase 4 request supplies an uploaded image and `operations: []`. The
-endpoint decodes the image in memory with Vips and returns PNG bytes. This is a
-contract smoke path, not an input-validation or transformation pipeline.
+A valid request supplies a qualified uploaded image and operations that the
+registry supports. The endpoint decodes and transforms in memory with Vips,
+then encodes the selected output format.
 
 Successful responses have:
 
 ```text
 HTTP 200
-Content-Type: image/png
+Content-Type: image/png, image/jpeg, or image/webp
 Cache-Control: no-store
 ```
 
