@@ -3,7 +3,7 @@
 module ImageLab
   module Operations
     class ResizeToFill
-      def self.call(image, operation, max_dimension:)
+      def self.call(image, operation, max_dimension: 8_192)
         image.thumbnail_image(
           dimension!(operation, "width", max_dimension),
           height: dimension!(operation, "height", max_dimension),

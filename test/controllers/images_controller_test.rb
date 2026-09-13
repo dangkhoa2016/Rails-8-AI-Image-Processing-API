@@ -25,14 +25,14 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "capabilities report the v1 empty operation set" do
+  test "capabilities report the implemented operation set" do
     get "/images/capabilities", headers: authenticated_headers, as: :json
 
     assert_response :success
     assert_equal(
       {
         "version" => "v1",
-        "operations" => [],
+        "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale],
         "request_content_type" => "multipart/form-data",
         "response_content_type" => "image/png"
       },
@@ -62,7 +62,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "processing rejects an unregistered operation" do
-    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"resize_to_fit"}]' }, headers: authenticated_headers
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"unknown_operation"}]' }, headers: authenticated_headers
 
     assert_response :unprocessable_entity
     assert json_response.fetch("error").present?
@@ -75,6 +75,15 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert json_response.fetch("error").present?
+  end
+
+  test "processing applies a registered operation" do
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"resize_to_fill","width":2,"height":2}]' }, headers: authenticated_headers
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal "2", response.headers.fetch("X-Image-Width")
+    assert_equal "2", response.headers.fetch("X-Image-Height")
   end
 
   test "processing maps invalid and unsupported uploads to JSON 422" do
