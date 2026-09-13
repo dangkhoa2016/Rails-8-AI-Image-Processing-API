@@ -42,3 +42,6 @@ Gemfile.lock
 
 # Internal agent planning artifacts are not public source.
 /docs/superpowers/
+
+# Linked worktrees are local development artifacts.
+/.worktrees/
