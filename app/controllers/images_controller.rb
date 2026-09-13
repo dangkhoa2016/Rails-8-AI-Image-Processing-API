@@ -10,12 +10,15 @@ class ImagesController < ApplicationController
               ImageLab::Errors::UnsupportedFormat,
               ImageLab::Errors::UploadTooLarge,
               ImageLab::Errors::PixelLimitExceeded,
+              ImageLab::Errors::InvalidOperation,
+              ImageLab::Errors::UnsupportedOperation,
+              ImageLab::Errors::OperationLimitExceeded,
               with: :unprocessable_image_input
 
   def capabilities
     render json: {
       version: "v1",
-      operations: [],
+      operations: ImageLab::OperationRegistry.available,
       request_content_type: "multipart/form-data",
       response_content_type: "image/png"
     }
@@ -23,9 +26,7 @@ class ImagesController < ApplicationController
 
   def process_image
     uploaded_image = params.require(:image)
-    operations = parse_operations
-    return unprocessable_entity!("operations must be a JSON array") unless operations.is_a?(Array)
-    return unprocessable_entity!("operations must be an empty JSON array in v1") unless operations.empty?
+    ImageLab::OperationRegistry.validate!(parse_operations)
 
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     image = ImageLab::Input.call(uploaded_image).image
