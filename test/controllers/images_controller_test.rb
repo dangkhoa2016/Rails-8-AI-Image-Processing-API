@@ -61,8 +61,17 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert json_response.fetch("error").present?
   end
 
-  test "processing rejects non-empty operations" do
-    post "/images/process", params: { image: tiny_png_upload, operations: '[{"name":"resize_to_fit"}]' }, headers: authenticated_headers
+  test "processing rejects an unregistered operation" do
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"resize_to_fit"}]' }, headers: authenticated_headers
+
+    assert_response :unprocessable_entity
+    assert json_response.fetch("error").present?
+  end
+
+  test "processing rejects operation counts above the configured maximum" do
+    with_env("IMAGE_MAX_OPERATIONS" => "1") do
+      post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"one"},{"op":"two"}]' }, headers: authenticated_headers
+    end
 
     assert_response :unprocessable_entity
     assert json_response.fetch("error").present?
