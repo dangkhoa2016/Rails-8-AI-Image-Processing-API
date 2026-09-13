@@ -56,6 +56,17 @@ class CorsPreflightTest < ActionDispatch::IntegrationTest
     assert_includes expose_headers.to_s.split(",").map(&:strip), configured_header
   end
 
+  test "image processing exposes response metadata headers to browser clients" do
+    get root_url, headers: { "Origin" => "http://localhost:4000" }
+
+    assert_response :ok
+    exposed = response.headers.fetch("Access-Control-Expose-Headers", "").split(",").map(&:strip)
+    assert_includes exposed, "X-Image-Width"
+    assert_includes exposed, "X-Image-Height"
+    assert_includes exposed, "X-Image-Format"
+    assert_includes exposed, "X-Processing-Time-Ms"
+  end
+
   private
 
   def preflight(requested_headers)
