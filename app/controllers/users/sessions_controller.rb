@@ -1,0 +1,111 @@
+# frozen_string_literal: true
+
+class Users::SessionsController < Devise::SessionsController
+  include RefreshTokenCookie
+
+  skip_before_action :verify_signed_out_user, only: :destroy
+  # before_action :configure_sign_in_params, only: [:create]
+
+  # GET /resource/sign_in
+  # def new
+  #   super
+  # end
+
+  # POST /resource/sign_in
+  def create
+    self.resource = warden.authenticate!(auth_options)
+    sign_in(resource_name, resource)
+    token = request.env["warden-jwt_auth.token"]
+
+    raw_refresh_token, _record = RefreshToken.generate_for(
+      resource,
+      user_agent: request.user_agent,
+      ip_address: request.remote_ip
+    )
+
+    write_refresh_token_cookie(raw_refresh_token)
+
+    render json: { user: resource, token: token, refresh_token: raw_refresh_token }, status: :ok
+  rescue Warden::NotAuthenticated
+    render json: { errors: [ I18n.t("session.invalid_credentials") ] }, status: :unauthorized
+  end
+
+  # DELETE /resource/sign_out
+  def destroy
+    # super
+
+    user = current_user if user_signed_in?
+    raw_token = refresh_token_from_request
+
+    if raw_token.present?
+      token_record = RefreshToken.find_by_raw_token(raw_token)
+      token_record&.revoke!
+    end
+    delete_refresh_token_cookie
+
+    if user
+      sign_out(user)
+      render json: { message: I18n.translate("user.signed_out", email: user.email) }, status: :ok
+    else
+      render json: { message: I18n.translate("user.not_signed_in") }, status: :unprocessable_entity
+    end
+  end
+
+  def show
+    user = current_user if user_signed_in?
+    token_info = build_token_info(user)
+
+    if user
+      render json: { user: user, token_info: token_info }, status: :ok
+    else
+      render json: { user: nil, token_info: token_info }, status: :unprocessable_entity
+    end
+  end
+
+  private
+
+  def build_token_info(user)
+    return empty_token_info unless user
+
+    token_info = (user.token_info || {}).dup
+    token_info[:token] ||= get_token_from_request_headers
+    payload = extract_payload(token_info)
+    merge_token_metadata(token_info, payload)
+  end
+
+  def empty_token_info
+    token = get_token_from_request_headers
+    payload = token ? decode_token(token) : {}
+    merge_token_metadata({ token: token }, payload)
+  end
+
+  def extract_payload(token_info)
+    payload = token_info.delete(:payload) || {}
+    if payload.empty? && token_info[:token]
+      payload, _config = decode_token(token_info[:token])
+    end
+    payload || {}
+  end
+
+  def merge_token_metadata(token_info, payload)
+    expired_at = payload["exp"] || 0
+    token_info.merge(
+      user_id: payload["sub"],
+      expired_at: Time.at(expired_at).to_datetime,
+      expired_in: (expired_at - Time.current.to_i).to_i,
+      expired: Time.current.to_i >= expired_at,
+      jti: payload["jti"]
+    )
+  end
+
+  def get_token_from_request_headers
+    Warden::JWTAuth::HeaderParser.from_env(warden.env)
+  end
+
+  # protected
+
+  # If you have extra params to permit, append them to the sanitizer.
+  # def configure_sign_in_params
+  #   devise_parameter_sanitizer.permit(:sign_in, keys: [:attribute])
+  # end
+end

@@ -1,0 +1,295 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scan_ruby:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Scan for common Rails security vulnerabilities using static analysis
+        run: bin/brakeman --no-pager
+
+  audit_gems:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install bundler-audit
+        run: gem install bundler-audit
+
+      - name: Update advisory database
+        run: bundle-audit update
+
+      - name: Check gems for known CVEs
+        run: bundle-audit check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Lint code for consistent style
+        run: bin/rubocop -f github
+
+      - name: Check repository policy
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+        run: |
+          BASE_SHA="${PR_BASE_SHA:-${PUSH_BASE_SHA:-}}"
+          if [[ -z "$BASE_SHA" ]]; then
+            BASE_SHA="$(git rev-parse HEAD^)"
+          elif ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null || \
+               ! git merge-base --is-ancestor "$BASE_SHA" HEAD; then
+            # A force-push replaces history, so the event's previous SHA is
+            # not a valid incremental base. Keep snapshot checks, but do not
+            # re-audit every historical commit as if it were newly added.
+            BASE_SHA=HEAD
+          fi
+          bin/check_repository_policy HEAD "$BASE_SHA"
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: ['3.2', '3.3', '4.0']
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rails_8_api_authentication_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rails_8_api_authentication_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential \
+            git \
+            libpq-dev \
+            pkg-config
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Set RAILS_MASTER_KEY from GitHub Secrets
+        run: echo "RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}" >> $GITHUB_ENV
+
+      - name: Prepare PostgreSQL and run tests
+        env:
+          RAILS_ENV: test
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_TEST_DB: rails_8_api_authentication_test
+          POSTGRES_STATEMENT_TIMEOUT: 5000ms
+          COVERAGE: "1"
+        run: |
+          bin/rails db:prepare
+          bin/rails test
+
+      - name: Generate coverage badge
+        if: always()
+        run: |
+          if [ -f public/coverage/.last_run.json ]; then
+            ruby -rjson -e '
+              data = JSON.parse(File.read("public/coverage/.last_run.json"))
+              coverage = data.dig("result", "line") || 0
+              color = coverage >= 80 ? "brightgreen" : coverage >= 50 ? "yellow" : "red"
+              badge = { schemaVersion: 1, label: "coverage", message: "#{coverage.round(1)}%", color: color }
+              File.write("public/coverage/coverage-badge.json", JSON.generate(badge))
+            '
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-ruby-${{ matrix.ruby-version }}
+          path: public/coverage/
+          retention-days: 14
+
+  test_custom_header:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rails_8_api_authentication_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rails_8_api_authentication_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential \
+            git \
+            libpq-dev \
+            pkg-config
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Set RAILS_MASTER_KEY from GitHub Secrets
+        run: echo "RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}" >> $GITHUB_ENV
+
+      - name: Prepare PostgreSQL and run tests with custom JWT header
+        env:
+          RAILS_ENV: test
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_TEST_DB: rails_8_api_authentication_test
+          POSTGRES_STATEMENT_TIMEOUT: 5000ms
+          JWT_AUTH_HEADER: X-Authorization
+        run: |
+          bin/rails db:prepare
+          bin/rails test
+
+  schema_load:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rails_8_api_authentication_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rails_8_api_authentication_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential \
+            git \
+            libpq-dev \
+            pkg-config
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Set RAILS_MASTER_KEY from GitHub Secrets
+        run: echo "RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}" >> $GITHUB_ENV
+
+      - name: Verify schema loading
+        env:
+          RAILS_ENV: test
+          ALLOW_DATABASE_RESET: "1"
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_TEST_DB: rails_8_api_authentication_schema_test
+          PGPASSWORD: postgres
+        run: |
+          createdb -h 127.0.0.1 -U postgres rails_8_api_authentication_schema_test
+          bin/verify_test_database
+          bin/rails db:schema:load
+          bin/rails test test/lib/schema_contract_test.rb
+
+  release_contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Validate release tooling syntax
+        run: |
+          bash -n scripts/release/lib.sh
+          bash -n scripts/release/test_release_tools.sh
+          bash -n scripts/release/verify_repository.sh
+          bash -n scripts/release/verify_ghcr.sh
+          bash -n scripts/release/smoke_deployment.sh
+
+      - name: Test release tooling
+        run: bash scripts/release/test_release_tools.sh
+
+      - name: Verify repository release contract
+        run: bash scripts/release/verify_repository.sh
+
+      - name: Verify published GHCR baseline images
+        run: bash scripts/release/verify_ghcr.sh
