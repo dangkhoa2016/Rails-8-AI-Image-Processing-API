@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
 require "json"
-require "vips"
 
 class ImagesController < ApplicationController
   include UserAccessControl
 
   before_action :require_authenticated_user
+  rescue_from ImageLab::Errors::InvalidImage,
+              ImageLab::Errors::UnsupportedFormat,
+              ImageLab::Errors::UploadTooLarge,
+              ImageLab::Errors::PixelLimitExceeded,
+              with: :unprocessable_image_input
 
   def capabilities
     render json: {
@@ -24,7 +28,7 @@ class ImagesController < ApplicationController
     return unprocessable_entity!("operations must be an empty JSON array in v1") unless operations.empty?
 
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    image = Vips::Image.new_from_buffer(uploaded_image.read, "")
+    image = ImageLab::Input.call(uploaded_image).image
     png = image.write_to_buffer(".png")
 
     response.headers["Cache-Control"] = "no-store"
@@ -45,6 +49,10 @@ class ImagesController < ApplicationController
 
   def unprocessable_entity!(message)
     render json: { error: message }, status: :unprocessable_entity
+  end
+
+  def unprocessable_image_input(exception)
+    render json: { error: exception.message }, status: :unprocessable_entity
   end
 
   def set_image_metadata_headers(image, started_at)
