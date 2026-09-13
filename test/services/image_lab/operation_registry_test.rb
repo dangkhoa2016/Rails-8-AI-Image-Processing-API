@@ -3,8 +3,8 @@
 require "test_helper"
 
 class ImageLab::OperationRegistryTest < ActiveSupport::TestCase
-  test "reports and validates the initial empty operation set" do
-    assert_equal [], ImageLab::OperationRegistry.available
+  test "reports public operations and validates an empty operation set" do
+    assert_equal %w[resize_to_fit resize_to_fill crop rotate flip grayscale], ImageLab::OperationRegistry.available
     assert_equal [], ImageLab::OperationRegistry.validate!([])
   end
 
@@ -17,7 +17,7 @@ class ImageLab::OperationRegistryTest < ActiveSupport::TestCase
 
   test "rejects an explicitly named but unregistered operation" do
     assert_raises(ImageLab::Errors::UnsupportedOperation) do
-      ImageLab::OperationRegistry.validate!([ { "op" => "resize_to_fit" } ])
+      ImageLab::OperationRegistry.validate!([ { "op" => "unknown_operation" } ])
     end
   end
 
@@ -33,6 +33,15 @@ class ImageLab::OperationRegistryTest < ActiveSupport::TestCase
         assert_equal 16, ImageLab::OperationRegistry.env_limit("IMAGE_MAX_OPERATIONS", 16)
       end
     end
+  end
+
+  test "resolves the implemented operation classes in request order" do
+    resolved = ImageLab::OperationRegistry.resolve!([
+      { "op" => "rotate", "degrees" => 90 },
+      { "op" => "grayscale" }
+    ])
+
+    assert_equal [ ImageLab::Operations::Rotate, ImageLab::Operations::Grayscale ], resolved.map(&:first)
   end
 
   private
