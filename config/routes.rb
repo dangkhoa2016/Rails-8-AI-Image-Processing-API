@@ -19,6 +19,9 @@ Rails.application.routes.draw do
   put "users/:id/status" => "users#toggle_status", constraints: { id: /[^\/?#]+/ }, defaults: { format: :json }
   post "users/create" => "users#create", as: :users_create, defaults: { format: :json }
 
+  get "images/capabilities" => "images#capabilities", defaults: { format: :json }
+  post "images/process" => "images#process_image"
+
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
