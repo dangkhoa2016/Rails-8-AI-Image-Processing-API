@@ -12,7 +12,7 @@
 
 ## Getting Help
 
-- **Bug reports**: Open a [GitHub Issue](https://github.com/dangkhoa2016/Rails-8-API-Authentication/issues/new?template=bug_report.md)
-- **Feature requests**: Open a [GitHub Issue](https://github.com/dangkhoa2016/Rails-8-API-Authentication/issues/new?template=feature_request.md)
+- **Bug reports**: Open a [GitHub Issue](https://github.com/dangkhoa2016/Rails-8-AI-Image-Processing-API/issues/new?template=bug_report.md)
+- **Feature requests**: Open a [GitHub Issue](https://github.com/dangkhoa2016/Rails-8-AI-Image-Processing-API/issues/new?template=feature_request.md)
 - **Security vulnerabilities**: See [SECURITY.md](SECURITY.md)
-- **Discussions**: Use [GitHub Discussions](https://github.com/dangkhoa2016/Rails-8-API-Authentication/discussions) for Q&A
+- **Discussions**: Use [GitHub Discussions](https://github.com/dangkhoa2016/Rails-8-AI-Image-Processing-API/discussions) for Q&A

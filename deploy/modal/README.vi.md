@@ -1,5 +1,8 @@
 # Deploy lên Modal.com — Public Production-Style Demo
 
+> **Trạng thái:** Đây là template đã đổi tên nhưng chưa cấu hình. Không có
+> Modal deployment nào là authority cho Rails 8 AI Image Processing API.
+
 > 🌐 Language / Ngôn ngữ: [English](README.md) | **Tiếng Việt**
 
 Recipe này deploy Rails API thành public production-style demo trên Modal.com. Rails tiếp tục dùng `Authorization: Bearer <JWT>` chuẩn.
@@ -63,7 +66,7 @@ Tạo named secret `rails-api-production` từ JSON file nằm ngoài repository
 - `SMTP_AUTHENTICATION=plain`;
 - `SMTP_SSL=true`;
 - `SMTP_ENABLE_STARTTLS_AUTO=false`;
-- `DEVISE_MAILER_SENDER=Rails 8 API Authentication <contact@<verified sender domain>>`;
+- `DEVISE_MAILER_SENDER=Rails 8 AI Image Processing API <contact@<verified sender domain>>`;
 - `APP_HOST=<public Modal host không có scheme>`;
 - `APP_PROTOCOL=https`;
 - `PUBLIC_DEMO_EMAIL_GUARD=true`.

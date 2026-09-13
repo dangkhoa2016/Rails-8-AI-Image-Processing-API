@@ -8,7 +8,7 @@ require "dotenv/load" if Rails.env.development? || Rails.env.test?
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
-module Rails8ApiAuthentication
+module Rails8AiImageProcessingApi
   class Application < Rails::Application
     # Initialize configuration defaults for this application.
     config.load_defaults 8.1

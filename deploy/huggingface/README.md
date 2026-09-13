@@ -1,16 +1,20 @@
 # Hugging Face Spaces PostgreSQL deployment recipe
 
-This directory contains a sanitized PostgreSQL production-style demo recipe for Hugging Face Docker Spaces. It uses the same immutable PostgreSQL runtime baseline as the Beam.cloud production-style demo:
+> **Status:** This is an unconfigured, renamed template. No Hugging Face
+> deployment is an authority for Rails 8 AI Image Processing API.
+
+This directory contains an unqualified Hugging Face Docker Spaces template. Set
+the image only after an independently published project artifact is verified:
 
 ```text
-ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77
+ghcr.io/<owner>/rails-8-ai-image-processing-api:<verified-version>
 ```
 
-The baseline source commit is `6897c773ec1321401e52c21c63870a72d01ca349`.
+This target is not HA, does not provide an SLA, and is not a multi-tenant
+production service.
 
-This target is a production-style demo. It is not HA, does not provide an SLA, and is not a multi-tenant production service.
-
-The frozen SQLite baseline `1d842b18c1d1b07c027cbb7d49c19a52d16f98bc` remains immutable for compatibility, historical reference, and lightweight/disposable demo use. It is not the canonical Hugging Face production-demo runtime.
+Do not use an upstream baseline artifact as this project's runtime or release
+authority.
 
 ## Docker Space configuration
 
@@ -18,7 +22,7 @@ Create a Docker Space and configure its Space README front matter with:
 
 ```yaml
 ---
-title: Rails 8 API Authentication
+title: Rails 8 AI Image Processing API
 sdk: docker
 app_port: 7860
 ---

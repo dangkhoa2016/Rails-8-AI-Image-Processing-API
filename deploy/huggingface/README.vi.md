@@ -1,16 +1,20 @@
 # Recipe triển khai PostgreSQL trên Hugging Face Spaces
 
-Thư mục này chứa PostgreSQL production-style demo recipe đã sanitize cho Hugging Face Docker Spaces. Recipe này dùng cùng immutable PostgreSQL runtime baseline với production-style demo trên Beam.cloud:
+> **Trạng thái:** Đây là template đã đổi tên nhưng chưa cấu hình. Không có
+> Hugging Face deployment nào là authority cho Rails 8 AI Image Processing API.
+
+Thư mục này chứa Hugging Face Docker Spaces template chưa qualification. Chỉ
+đặt image sau khi một project artifact được publish và xác minh độc lập:
 
 ```text
-ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77
+ghcr.io/<owner>/rails-8-ai-image-processing-api:<verified-version>
 ```
 
-Baseline source commit là `6897c773ec1321401e52c21c63870a72d01ca349`.
+Target này không phải HA, không cung cấp SLA và không phải multi-tenant
+production service.
 
-Target này là production-style demo. Đây không phải HA, không cung cấp SLA và không phải multi-tenant production service.
-
-Frozen SQLite baseline `1d842b18c1d1b07c027cbb7d49c19a52d16f98bc` vẫn được giữ bất biến để phục vụ compatibility, historical reference và lightweight/disposable demo. Nó không còn là canonical Hugging Face production-demo runtime.
+Không dùng upstream baseline artifact làm runtime hoặc release authority của
+project này.
 
 ## Cấu hình Docker Space
 
@@ -18,7 +22,7 @@ Tạo Docker Space và cấu hình YAML front matter trong README của Space:
 
 ```yaml
 ---
-title: Rails 8 API Authentication
+title: Rails 8 AI Image Processing API
 sdk: docker
 app_port: 7860
 ---

@@ -82,27 +82,28 @@ fi
 
 RELEASE_PROCESS_EN="${SCRIPT_DIR}/../../docs/RELEASE_PROCESS.md"
 RELEASE_PROCESS_VI="${SCRIPT_DIR}/../../docs/RELEASE_PROCESS.vi.md"
-if grep -Fq 'Tag the exact post-merge `main` commit that passed mandatory post-merge CI.' "${RELEASE_PROCESS_EN}" &&
-   grep -Fq 'Never tag an earlier candidate, evidence-only commit, or pre-merge branch head for a stable release.' "${RELEASE_PROCESS_EN}" &&
-   grep -Fq 'Tag exact post-merge `main` commit đã PASS mandatory post-merge CI.' "${RELEASE_PROCESS_VI}" &&
-   grep -Fq 'Không tag candidate cũ hơn, evidence-only commit hoặc pre-merge branch head cho stable release.' "${RELEASE_PROCESS_VI}"; then
-  ok "release policy tags the exact verified post-merge main commit"
+if grep -Fq '# Release roadmap' "${RELEASE_PROCESS_EN}" &&
+   grep -Fq '`v0.1.0`' "${RELEASE_PROCESS_EN}" &&
+   grep -Fq 'has no published release yet' "${RELEASE_PROCESS_EN}" &&
+   grep -Fq '# Lộ trình release' "${RELEASE_PROCESS_VI}" &&
+   grep -Fq '`v0.1.0`' "${RELEASE_PROCESS_VI}" &&
+   grep -Fq 'chưa có release được công bố' "${RELEASE_PROCESS_VI}"; then
+  ok "release roadmap starts with independent prereleases"
 else
-  bad "release policy tags the exact verified post-merge main commit"
+  bad "release roadmap starts with independent prereleases"
 fi
 
 HF_DOCKERFILE="${SCRIPT_DIR}/../../deploy/huggingface/Dockerfile"
 HF_README_EN="${SCRIPT_DIR}/../../deploy/huggingface/README.md"
 HF_README_VI="${SCRIPT_DIR}/../../deploy/huggingface/README.vi.md"
-if grep -Fq 'ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77' "${HF_DOCKERFILE}" &&
-   ! grep -Fq 'sqlite-1d842b1' "${HF_DOCKERFILE}" &&
-   grep -Fq 'PostgreSQL production-style demo' "${HF_README_EN}" &&
-   grep -Fq 'DATABASE_URL' "${HF_README_EN}" &&
-   grep -Fq 'PostgreSQL production-style demo' "${HF_README_VI}" &&
-   grep -Fq 'DATABASE_URL' "${HF_README_VI}"; then
-  ok "Hugging Face production demo uses canonical PostgreSQL runtime"
+if grep -Fq 'ARG RAILS_IMAGE=ghcr.io/<owner>/rails-8-ai-image-processing-api:unpublished' "${HF_DOCKERFILE}" &&
+   grep -Fq 'unconfigured, renamed template' "${HF_README_EN}" &&
+   grep -Fq '<verified-version>' "${HF_README_EN}" &&
+   grep -Fq 'template đã đổi tên nhưng chưa cấu hình' "${HF_README_VI}" &&
+   grep -Fq '<verified-version>' "${HF_README_VI}"; then
+  ok "Hugging Face template has no upstream runtime authority"
 else
-  bad "Hugging Face production demo uses canonical PostgreSQL runtime"
+  bad "Hugging Face template has no upstream runtime authority"
 fi
 
 SMOKE_SCRIPT="${SCRIPT_DIR}/smoke_deployment.sh"

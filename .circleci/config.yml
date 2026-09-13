@@ -16,7 +16,7 @@ executors:
         environment:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: rails_8_api_authentication_test
+          POSTGRES_DB: rails_8_ai_image_processing_api_test
 
 jobs:
   build_and_test:
@@ -79,7 +79,7 @@ jobs:
             POSTGRES_PORT: 5432
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
-            POSTGRES_TEST_DB: rails_8_api_authentication_test
+            POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
             POSTGRES_STATEMENT_TIMEOUT: 5000ms
           command: bin/rails db:prepare
 
@@ -101,7 +101,7 @@ jobs:
             POSTGRES_PORT: 5432
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
-            POSTGRES_TEST_DB: rails_8_api_authentication_test
+            POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
             POSTGRES_STATEMENT_TIMEOUT: 5000ms
           command: COVERAGE=1 bundle exec rails test
 
@@ -159,7 +159,7 @@ jobs:
             POSTGRES_PORT: 5432
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
-            POSTGRES_TEST_DB: rails_8_api_authentication_test
+            POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
             POSTGRES_STATEMENT_TIMEOUT: 5000ms
           command: bin/rails db:prepare
       - run:
@@ -169,7 +169,7 @@ jobs:
             POSTGRES_PORT: 5432
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: postgres
-            POSTGRES_TEST_DB: rails_8_api_authentication_test
+            POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
             POSTGRES_STATEMENT_TIMEOUT: 5000ms
           command: bundle exec rails test
 

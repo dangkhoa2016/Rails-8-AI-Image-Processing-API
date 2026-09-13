@@ -1,4 +1,4 @@
-ARG RAILS_IMAGE=ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77
+ARG RAILS_IMAGE=ghcr.io/<owner>/rails-8-ai-image-processing-api:unpublished
 FROM ${RAILS_IMAGE}
 
 USER root

@@ -4,7 +4,7 @@ import subprocess
 
 import modal
 
-APP_NAME = "rails-8-api-authentication"
+APP_NAME = "rails-8-ai-image-processing-api"
 SECRET_NAME = "rails-api-production"
 PORT = 4000
 

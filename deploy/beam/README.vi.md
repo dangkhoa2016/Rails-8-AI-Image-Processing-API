@@ -1,16 +1,20 @@
 # Recipe triển khai Beam.cloud
 
-Thư mục này chứa recipe PostgreSQL production-style demo đã được sanitize cho Beam.cloud. Đây không phải triển khai HA, không cung cấp SLA và không biến demo thành dịch vụ production multi-tenant.
+> **Trạng thái:** Đây là template đã đổi tên nhưng chưa cấu hình. Không có Beam
+> deployment nào là authority cho Rails 8 AI Image Processing API.
+
+Thư mục này chứa Beam.cloud template chưa qualification. Đây không phải triển
+khai HA, không cung cấp SLA và không biến project thành dịch vụ production
+multi-tenant.
 
 ## Source image
 
-Wrapper mặc định dùng immutable PostgreSQL baseline image:
+Đặt `RAILS_IMAGE` thành project image đã được publish độc lập sau khi quy trình
+release sau này xác minh:
 
 ```text
-ghcr.io/dangkhoa2016/rails-8-api-authentication:postgresql-6897c77
+ghcr.io/<owner>/rails-8-ai-image-processing-api:<verified-version>
 ```
-
-Baseline source commit là `6897c773ec1321401e52c21c63870a72d01ca349`.
 
 ## Beam SDK và deploy runner
 

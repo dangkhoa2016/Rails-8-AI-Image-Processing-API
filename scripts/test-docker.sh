@@ -7,7 +7,7 @@
 #    bash scripts/test-docker.sh --database sqlite
 #
 #  postgres mode (default):
-#    - Builds `rails-8-api-authentication:postgresql` from the baseline branch
+#    - Builds `rails-8-ai-image-processing-api:postgresql` from the baseline branch
 #      `baseline/postgresql-v1` (6897c77..., contains the JWT auth feature).
 #    - Starts a dedicated `postgres:17` container on a bridge network and
 #      creates the production / cache / queue / cable databases.
@@ -17,7 +17,7 @@
 #      container.
 #
 #  sqlite mode:
-#    - Builds `rails-8-api-authentication:sqlite` from the baseline branch
+#    - Builds `rails-8-ai-image-processing-api:sqlite` from the baseline branch
 #      `baseline/sqlite-v1` (1d842b1..., contains the JWT auth feature). SQLite
 #      databases live in storage/ inside the image, so no database container is
 #      needed.
@@ -127,16 +127,16 @@ esac
 # --- Backend-specific configuration --------------------------------------------
 case "$DATABASE" in
   postgres)
-    IMAGE_NAME="rails-8-api-authentication:postgresql"
+    IMAGE_NAME="rails-8-ai-image-processing-api:postgresql"
     BASELINE_REF="baseline/postgresql-v1"
     ENV_FILE_BASE=".env.postgres"
     PG_IMAGE="postgres:17"
     PG_USER="postgres"
     PG_PASSWORD="postgres"
-    DB_BASE="rails_8_api_authentication_production"
+    DB_BASE="rails_8_ai_image_processing_api_production"
     ;;
   sqlite)
-    IMAGE_NAME="rails-8-api-authentication:sqlite"
+    IMAGE_NAME="rails-8-ai-image-processing-api:sqlite"
     BASELINE_REF="baseline/sqlite-v1"
     ENV_FILE_BASE=".env.sqlite"
     ;;

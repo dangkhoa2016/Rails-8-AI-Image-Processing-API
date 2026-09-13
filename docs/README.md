@@ -1,21 +1,25 @@
-# Documentation Index
+# Documentation index
 
-## Authentication and security
+## Current authentication baseline
 
 - [Access control](ACCESS_CONTROL.md)
 - [JWT lifecycle](JWT_LIFECYCLE.md)
 - [Rate limiting](RATE_LIMITING.md)
 - [Rate limiting — Tiếng Việt](RATE_LIMITING.vi.md)
 
-## Deployment and release engineering
+## Project operations
 
-- [Deployment guide](DEPLOYMENT.md)
-- [Deployment guide — Tiếng Việt](DEPLOYMENT.vi.md)
-- [Docker images](DOCKER_IMAGES.md)
-- [Release process](RELEASE_PROCESS.md)
-- [Release process — Tiếng Việt](RELEASE_PROCESS.vi.md)
+- [Deployment planning](DEPLOYMENT.md)
+- [Deployment planning — Tiếng Việt](DEPLOYMENT.vi.md)
+- [Docker image policy](DOCKER_IMAGES.md)
+- [Docker image policy — Tiếng Việt](DOCKER_IMAGES.vi.md)
+- [Release roadmap](RELEASE_PROCESS.md)
+- [Release roadmap — Tiếng Việt](RELEASE_PROCESS.vi.md)
 - [Project changelog](../CHANGELOG.md)
-- [Modal.com public production-style demo](../deploy/modal/README.md)
-- [Modal.com public production-style demo — Tiếng Việt](../deploy/modal/README.vi.md)
-- [Beam.cloud PostgreSQL recipe](../deploy/beam/README.md)
-- [Hugging Face Spaces SQLite recipe](../deploy/huggingface/README.md)
+
+## Historical attribution
+
+- [Upstream historical records](history/README.md)
+
+No deployment or release described in an upstream historical record is an
+authority for this project.

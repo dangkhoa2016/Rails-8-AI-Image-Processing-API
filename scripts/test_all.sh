@@ -26,7 +26,7 @@ run_suite() {
 }
 
 echo -e "${CYAN}=====================================================${NC}"
-echo -e "${CYAN}   RAILS 8 API AUTHENTICATION - FULL SUITE TEST      ${NC}"
+echo -e "${CYAN}   RAILS 8 AI IMAGE PROCESSING API - FULL SUITE TEST ${NC}"
 echo -e "${CYAN}=====================================================${NC}"
 
 run_suite "Regular User Test Suite (test_user.sh)" "test_user.sh"
