@@ -1,0 +1,67 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
+en:
+  hello: "Hello world"
+
+  jwt:
+    decode_error: Invalid token
+
+  errors:
+    route_not_found: Route not found
+    internal_error: Something went wrong, please try again later
+    unauthorized: Unauthorized
+    forbidden: Forbidden
+    record_not_found: Record not found
+    parameter_missing: Parameter missing
+    not_found: "%{model} not found"
+    must_be_administrator: You must be an administrator to perform this action
+
+  session:
+    invalid_credentials: Invalid email or password
+
+  home:
+    welcome: Welcome to Rails 8 API Authentication
+
+  refresh_token:
+    missing: Refresh token is missing
+    invalid: Invalid refresh token
+    reuse_detected: "Security alert: Refresh token reuse detected. All sessions revoked."
+    expired: Refresh token has expired
+    inactive_account: User account is inactive
+
+  user:
+    deleted: User [%{email}] with id [%{id}] has been deleted
+    signed_out: "Your account: %{email} has been signed out successfully"
+    not_signed_in: No user is signed in
+    cannot_demote_yourself: Cannot demote yourself
+    current_password_incorrect: Current password is incorrect
+    active_must_be_boolean: active must be a boolean
+    confirmation_email_failed: "Could not send confirmation email. Please try again later."
+    unsupported_public_demo_email_domain: "must use a supported public-demo provider (%{providers})"

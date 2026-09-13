@@ -1,0 +1,40 @@
+# frozen_string_literal: true
+
+require_relative "boot"
+require "rails/all"
+require "dotenv/load" if Rails.env.development? || Rails.env.test?
+
+# Require the gems listed in Gemfile, including any gems
+# you've limited to :test, :development, or :production.
+Bundler.require(*Rails.groups)
+
+module Rails8ApiAuthentication
+  class Application < Rails::Application
+    # Initialize configuration defaults for this application.
+    config.load_defaults 8.1
+
+    # Please, add to the `config` `ignore` list any files that are not Ruby
+    # files, so that Rails does not add `.rb` extensions to them.
+    config.autoload_lib(ignore: %w[assets tasks])
+
+    # Configuration for the application, engines, and railties goes here.
+    #
+    # These settings can be overridden in specific environments using the files
+    # in config/environments, which are processed later.
+    #
+    # config.time_zone = "Central Time (US & Canada)"
+    # config.eager_load_paths << Rails.root.join("extras")
+
+    # Only loads a smaller set of middleware suitable for API only apps.
+    # Middleware like session, flash, cookies can be added back manually.
+    # Skip views, helpers and assets when generating a new resource.
+    config.api_only = true
+
+    # Refresh tokens are delivered via HttpOnly cookies, so the cookie
+    # middleware must be mounted even though the app is API-only.
+    config.middleware.use ActionDispatch::Cookies
+
+    # Rack::Attack is not auto-loaded in API-only mode; mount it explicitly.
+    config.middleware.use Rack::Attack
+  end
+end
