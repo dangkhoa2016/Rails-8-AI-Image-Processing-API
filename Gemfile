@@ -11,6 +11,7 @@ gem "rails", "~> 8.1.3"
 gem "json", "< 3.0"
 # Use PostgreSQL as the database for Active Record
 gem "pg", "~> 1.6"
+gem "ruby-vips", "~> 2.3"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
