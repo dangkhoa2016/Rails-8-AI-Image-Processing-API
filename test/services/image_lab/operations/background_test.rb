@@ -28,6 +28,7 @@ class ImageLabOperationsBackgroundTest < ActiveSupport::TestCase
     result = ImageLab::Operations::Background.call(image, { "op" => "background", "color" => "#ffffff" })
 
     assert_equal 3, result.bands
+    assert_equal :srgb, result.interpretation
     assert_equal [ 200.0, 200.0, 200.0 ], result.getpoint(0, 0)
   end
 end

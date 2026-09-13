@@ -33,6 +33,7 @@ class ImageLabPipelineTest < ActiveSupport::TestCase
     ], max_output_pixels: 10)
 
     assert_equal 3, result.bands
+    assert_equal :srgb, result.interpretation
     assert_equal [ 200.0, 200.0, 200.0 ], result.getpoint(0, 0)
   end
 end
