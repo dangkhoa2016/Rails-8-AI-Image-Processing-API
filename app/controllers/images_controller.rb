@@ -30,16 +30,18 @@ class ImagesController < ApplicationController
   def process_image
     uploaded_image = params.require(:image)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    image = ImageLab::Pipeline.call(
-      ImageLab::Input.call(uploaded_image).image,
-      parse_operations,
-      max_output_pixels: ImageLab::OperationRegistry.env_limit("IMAGE_MAX_OUTPUT_PIXELS", 25_000_000)
-    )
-    encoded = ImageLab::Operations::Encode.call(image, format: params[:format], quality: parse_quality)
+    ImageLab::Input.with_image(uploaded_image) do |input|
+      image = ImageLab::Pipeline.call(
+        input,
+        parse_operations,
+        max_output_pixels: ImageLab::OperationRegistry.env_limit("IMAGE_MAX_OUTPUT_PIXELS", 25_000_000)
+      )
+      encoded = ImageLab::Operations::Encode.call(image, format: params[:format], quality: parse_quality)
 
-    response.headers["Cache-Control"] = "no-store"
-    set_image_metadata_headers(image, started_at, encoded.format)
-    send_data encoded.bytes, type: encoded.content_type, disposition: "inline"
+      response.headers["Cache-Control"] = "no-store"
+      set_image_metadata_headers(image, started_at, encoded.format)
+      send_data encoded.bytes, type: encoded.content_type, disposition: "inline"
+    end
   end
 
   private
