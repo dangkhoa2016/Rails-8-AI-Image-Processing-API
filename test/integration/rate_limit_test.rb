@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "rack/test"
+require "tempfile"
+require "vips"
 
 class RateLimitTest < ActionDispatch::IntegrationTest
   JSON_HEADERS = { "CONTENT_TYPE" => "application/json", "HTTP_ACCEPT" => "application/json" }.freeze
@@ -8,14 +11,18 @@ class RateLimitTest < ActionDispatch::IntegrationTest
   REGISTRATION_PATH = "/users"
   PASSWORD_PATH = "/users/password"
   REFRESH_PATH = "/users/tokens/refresh"
+  IMAGE_PROCESS_PATH = "/images/process"
 
   setup do
     Rack::Attack.enabled = true
     Rack::Attack.cache.store.clear
+    @image_user = confirmed_user("image-rate-limit-#{SecureRandom.hex(4)}@example.local")
+    @image_upload_tempfiles = []
   end
 
   teardown do
     Rack::Attack.cache.store.clear
+    @image_upload_tempfiles.each(&:close!)
   end
 
   test "sign in allows up to 5 requests per IP per 60s then throttles" do
@@ -174,9 +181,76 @@ class RateLimitTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "image processing allows 30 requests per IP per minute then returns 429 with Retry-After" do
+    with_stable_throttle_window do
+      ip = "11.11.11.#{(rand * 200).to_i + 1}"
+
+      30.times do |index|
+        post_image_process(ip)
+        assert_response :success, "Expected image request #{index + 1} to pass"
+      end
+
+      post_image_process(ip)
+
+      assert_response :too_many_requests
+      assert_equal "Too many requests. Please try again later.", json_response.fetch("error")
+      assert response.headers.key?("Retry-After")
+    end
+  end
+
+  test "image processing throttle is isolated per IP" do
+    with_stable_throttle_window do
+      throttled_ip = "12.12.12.#{(rand * 200).to_i + 1}"
+      other_ip = "13.13.13.#{(rand * 200).to_i + 1}"
+
+      30.times { post_image_process(throttled_ip) }
+      post_image_process(other_ip)
+
+      assert_response :success
+    end
+  end
+
+  test "image processing throttle leaves health checks and sign-in available" do
+    with_stable_throttle_window do
+      ip = "14.14.14.#{(rand * 200).to_i + 1}"
+
+      30.times { post_image_process(ip) }
+
+      get "/up", env: { "REMOTE_ADDR" => ip }
+      assert_response :success
+
+      post SIGN_IN_PATH,
+        params: { user: { email: "missing-#{SecureRandom.hex(4)}@example.local", password: "wrong" } }.to_json,
+        headers: JSON_HEADERS,
+        env: { "REMOTE_ADDR" => ip }
+      assert_response :unauthorized
+    end
+  end
+
   private
 
   def with_stable_throttle_window
     Time.stub(:now, Time.new(2026, 7, 31, 0, 0, 0)) { yield }
+  end
+
+  def post_image_process(ip)
+    post IMAGE_PROCESS_PATH,
+      params: { image: tiny_png_upload, operations: "[]" },
+      headers: jwt_auth_headers_for(@image_user, { "Accept" => "application/json" }),
+      env: { "REMOTE_ADDR" => ip }
+  end
+
+  def tiny_png_upload
+    tempfile = Tempfile.new([ "image-rate-limit", ".png" ])
+    @image_upload_tempfiles << tempfile
+    tempfile.binmode
+    tempfile.write(tiny_png_bytes)
+    tempfile.rewind
+
+    Rack::Test::UploadedFile.new(tempfile.path, "image/png", true)
+  end
+
+  def tiny_png_bytes
+    Vips::Image.new_from_memory([ 255, 0, 0 ].pack("C*"), 1, 1, 3, :uchar).write_to_buffer(".png")
   end
 end

@@ -76,6 +76,13 @@ class Rack::Attack
     req.ip if req.path == "/users/tokens/refresh" && req.post?
   end
 
+  # Image processing is authenticated but CPU-intensive. Keep the key tied to
+  # Rack::Request's proxy-aware IP handling; do not trust a client-supplied
+  # header or parse JWTs in this middleware.
+  throttle("image_processing/ip", limit: 30, period: 60) do |req|
+    req.ip if req.path == "/images/process" && req.post?
+  end
+
   # Sign-in: 5 attempts per 60 s per IP.
   # Defends against distributed brute-force campaigns.
   throttle("sign_in/ip", limit: 5, period: 60) do |req|

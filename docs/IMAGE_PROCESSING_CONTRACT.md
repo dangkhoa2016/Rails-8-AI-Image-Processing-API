@@ -110,6 +110,32 @@ operation, invalid operation parameter, invalid output setting, or qualified
 input that violates byte/format/decode/dimension/pixel guards returns `422
 Unprocessable Entity`.
 
+## Rate limiting
+
+`POST /images/process` is limited to 30 requests per 60 seconds per request IP
+address. The key uses the application's existing Rack::Attack proxy/IP
+handling; the API does not rely on a client-supplied forwarding header or
+parse JWTs in middleware. When the limit is exceeded, the established error
+contract applies:
+
+```text
+HTTP 429
+Content-Type: application/json
+Retry-After: 60
+```
+
+The response body is:
+
+```json
+{
+  "error": "Too many requests. Please try again later."
+}
+```
+
+The rate limit is intentionally an initial policy and will be tuned after the
+Phase 12 deterministic-processing benchmark. `GET /images/capabilities` is
+not rate-limited by this image-processing workload policy.
+
 ## Test contract
 
 `test/controllers/images_controller_test.rb` proves the boundary with real
