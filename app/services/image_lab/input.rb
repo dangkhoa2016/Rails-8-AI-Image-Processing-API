@@ -36,6 +36,8 @@ module ImageLab
       image = Vips::Image.new_from_buffer(buffer, "")
       raise Errors::UnsupportedFormat, "image format is unsupported" unless ALLOWED_LOADERS.include?(loader_for(image))
       raise Errors::UnsupportedFormat, "multi-page images are unsupported" if page_count(image) > 1
+
+      image = image.autorot
       raise Errors::PixelLimitExceeded, "image exceeds dimension limit" if image.width > @max_dimension || image.height > @max_dimension
       raise Errors::PixelLimitExceeded, "image exceeds pixel limit" if image.width * image.height > @max_input_pixels
 

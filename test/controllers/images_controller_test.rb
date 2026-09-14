@@ -144,6 +144,20 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert response.body.start_with?("\x89PNG\r\n\x1A\n".b)
   end
 
+  test "processing normalizes EXIF orientation and never returns GPS metadata" do
+    post "/images/process", params: {
+      image: upload_from_bytes(exif_orientation_with_gps_jpeg, "oriented.jpg"),
+      operations: "[]",
+      format: "jpeg",
+      preserve_metadata: "true"
+    }, headers: authenticated_headers
+
+    assert_response :success
+    output = Vips::Image.new_from_buffer(response.body, "")
+    assert_equal [ 1, 2 ], [ output.width, output.height ]
+    assert_empty output.get_fields.grep(/exif|gps|orientation|comment/i)
+  end
+
   private
 
   def authenticated_headers

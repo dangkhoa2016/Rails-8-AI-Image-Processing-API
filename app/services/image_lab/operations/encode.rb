@@ -19,11 +19,11 @@ module ImageLab
 
         case format
         when "png"
-          Result.new(bytes: image.write_to_buffer(".png"), content_type: "image/png", format: "png")
+          Result.new(bytes: image.write_to_buffer(".png[strip]"), content_type: "image/png", format: "png")
         when "jpeg"
-          Result.new(bytes: image.write_to_buffer(".jpg[Q=#{quality}]"), content_type: "image/jpeg", format: "jpeg")
+          Result.new(bytes: image.write_to_buffer(".jpg[Q=#{quality},strip]"), content_type: "image/jpeg", format: "jpeg")
         when "webp"
-          Result.new(bytes: image.write_to_buffer(".webp[Q=#{quality}]"), content_type: "image/webp", format: "webp")
+          Result.new(bytes: image.write_to_buffer(".webp[Q=#{quality},strip]"), content_type: "image/webp", format: "webp")
         end
       end
     end

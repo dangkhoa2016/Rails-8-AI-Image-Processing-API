@@ -3,8 +3,8 @@
 ## Purpose and scope
 
 This document defines the authenticated HTTP boundary for deterministic image
-processing. Phase 4 established the boundary; Phases 5 through 8 added
-qualified input handling and the currently available transforms.
+processing. Phase 4 established the boundary; Phases 5 through 9 added
+qualified input handling, transforms, and a fixed metadata/orientation policy.
 
 The contract is version `v1`. It does not add API keys, public access, upload
 persistence, background jobs, or AI functionality.
@@ -48,7 +48,10 @@ The request uses `multipart/form-data` and reserves these fields:
 
 A valid request supplies a qualified uploaded image and operations that the
 registry supports. The endpoint decodes and transforms in memory with Vips,
-then encodes the selected output format.
+then encodes the selected output format. EXIF orientation is honored during
+decode. Each response is encoded with metadata stripped; this includes GPS,
+camera/device information, serials, thumbnails, author/comment fields, ICC,
+and orientation data. The API does not expose `preserve_metadata`.
 
 ### Color and filter operations
 
@@ -114,10 +117,11 @@ in-memory PNG bytes and no mocks:
 3. a tiny PNG processed with a registered color operation returns transformed
    PNG bytes, `Cache-Control: no-store`, and the declared metadata headers;
 4. capabilities returns exactly the explicit registry set.
+5. a real EXIF-orientation JPEG with GPS data is rotated correctly and returns
+   without EXIF, GPS, or orientation metadata.
 
 ## Explicit non-goals
 
 This API does not persist uploads/results, enqueue work, expose public
-capabilities, accept remote image URLs, expose arbitrary Vips invocation, apply
-metadata/orientation policy, or add AI inference. Those responsibilities belong
-to later phases.
+capabilities, accept remote image URLs, expose arbitrary Vips invocation, or
+add AI inference. Those responsibilities belong to later phases.

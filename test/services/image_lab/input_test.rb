@@ -60,6 +60,17 @@ class ImageLab::InputTest < ActiveSupport::TestCase
     end
   end
 
+  test "honors EXIF orientation before returning the image" do
+    source = Vips::Image.new_from_buffer(exif_orientation_with_gps_jpeg, "")
+    image = ImageLab::Input.call(StringIO.new(exif_orientation_with_gps_jpeg)).image
+
+    assert_equal [ 1, 2 ], [ image.width, image.height ]
+    assert_equal source.getpoint(0, 0), image.getpoint(0, 0)
+    assert_equal source.getpoint(1, 0), image.getpoint(0, 1)
+    assert_not_includes image.get_fields, "orientation"
+    assert_not_includes image.get_fields, "exif-ifd0-Orientation"
+  end
+
   private
 
   def rgb_image

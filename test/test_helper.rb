@@ -32,6 +32,7 @@ require "cgi"
 require "devise"
 require "devise/jwt/test_helpers"
 require "securerandom"
+require_relative "support/image_fixture_bytes"
 
 module JwtHeaderHelpers
   def jwt_auth_header_name
@@ -42,6 +43,7 @@ end
 module ActiveSupport
   class TestCase
     include JwtHeaderHelpers
+    include ImageFixtureBytes
 
     # Run tests in parallel with specified workers
     # (single-process when measuring coverage so SimpleCov results are complete)
@@ -88,6 +90,7 @@ end
 class ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
   include JwtHeaderHelpers
+  include ImageFixtureBytes
 
   def json_response
     JSON.parse(response.body)
