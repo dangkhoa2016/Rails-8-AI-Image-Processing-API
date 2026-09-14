@@ -32,6 +32,7 @@ require "cgi"
 require "devise"
 require "devise/jwt/test_helpers"
 require "securerandom"
+require_relative "support/image_fixture_bytes"
 
 module JwtHeaderHelpers
   def jwt_auth_header_name
@@ -42,10 +43,12 @@ end
 module ActiveSupport
   class TestCase
     include JwtHeaderHelpers
+    include ImageFixtureBytes
 
     # Run tests in parallel with specified workers
     # (single-process when measuring coverage so SimpleCov results are complete)
-    parallelize(workers: :number_of_processors) unless ENV["COVERAGE"]
+    parallel_workers = ENV["PARALLEL_WORKERS"] ? Integer(ENV.fetch("PARALLEL_WORKERS"), 10) : :number_of_processors
+    parallelize(workers: parallel_workers) unless ENV["COVERAGE"]
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
@@ -88,6 +91,7 @@ end
 class ActionDispatch::IntegrationTest
   include Devise::Test::IntegrationHelpers
   include JwtHeaderHelpers
+  include ImageFixtureBytes
 
   def json_response
     JSON.parse(response.body)

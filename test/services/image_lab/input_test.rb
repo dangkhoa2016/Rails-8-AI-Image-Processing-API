@@ -2,6 +2,7 @@
 
 require "test_helper"
 require "stringio"
+require "tmpdir"
 require "vips"
 
 class ImageLab::InputTest < ActiveSupport::TestCase
@@ -60,6 +61,101 @@ class ImageLab::InputTest < ActiveSupport::TestCase
     end
   end
 
+  test "uses a process-specific default scratch directory in test" do
+    assert_equal Rails.root.join("tmp/image_lab/process-#{Process.pid}"),
+                 ImageLab::Input.default_temporary_directory
+  end
+
+  test "derives different test scratch directories for different process identities" do
+    first = Process.stub(:pid, 10_001) { ImageLab::Input.default_temporary_directory }
+    second = Process.stub(:pid, 10_002) { ImageLab::Input.default_temporary_directory }
+
+    assert_equal Rails.root.join("tmp/image_lab/process-10001"), first
+    assert_equal Rails.root.join("tmp/image_lab/process-10002"), second
+    assert_not_equal first, second
+  end
+
+  test "keeps the established scratch root outside test" do
+    production = ActiveSupport::StringInquirer.new("production")
+
+    Rails.stub(:env, production) do
+      assert_equal Rails.root.join("tmp/image_lab"), ImageLab::Input.default_temporary_directory
+    end
+  end
+
+  test "honors EXIF orientation before returning the image" do
+    source = Vips::Image.new_from_buffer(exif_orientation_with_gps_jpeg, "")
+    image = ImageLab::Input.call(StringIO.new(exif_orientation_with_gps_jpeg)).image
+
+    assert_equal [ 1, 2 ], [ image.width, image.height ]
+    assert_equal source.getpoint(0, 0), image.getpoint(0, 0)
+    assert_equal source.getpoint(1, 0), image.getpoint(0, 1)
+    assert_not_includes image.get_fields, "orientation"
+    assert_not_includes image.get_fields, "exif-ifd0-Orientation"
+  end
+
+  test "removes its app-owned temporary upload after a successful processing block" do
+    with_image_lab_temp_directory do |directory|
+      paths_during_processing = nil
+
+      ImageLab::Input.with_image(StringIO.new(rgb_image.write_to_buffer(".png")), temporary_directory: directory) do |image|
+        paths_during_processing = image_lab_temp_paths(directory)
+        assert_equal 2, image.width
+      end
+
+      assert_equal 1, paths_during_processing.length
+      assert_empty image_lab_temp_paths(directory)
+    end
+  end
+
+  test "removes its app-owned temporary upload after validation and Vips decode failures" do
+    with_image_lab_temp_directory do |directory|
+      assert_raises(ImageLab::Errors::InvalidImage) do
+        ImageLab::Input.with_image(StringIO.new(""), temporary_directory: directory) { flunk }
+      end
+      assert_empty image_lab_temp_paths(directory)
+
+      tiff = rgb_image.write_to_buffer(".tiff")
+      assert_raises(ImageLab::Errors::UnsupportedFormat) do
+        ImageLab::Input.with_image(StringIO.new(tiff), temporary_directory: directory) { flunk }
+      end
+      assert_empty image_lab_temp_paths(directory)
+
+      assert_raises(ImageLab::Errors::InvalidImage) do
+        ImageLab::Input.with_image(StringIO.new("\xFF\xD8\xFF\xE0".b), temporary_directory: directory) { flunk }
+      end
+      assert_empty image_lab_temp_paths(directory)
+    end
+  end
+
+  test "removes its app-owned temporary upload when processing raises" do
+    with_image_lab_temp_directory do |directory|
+      path = nil
+
+      assert_raises(RuntimeError) do
+        ImageLab::Input.with_image(StringIO.new(rgb_image.write_to_buffer(".png")), temporary_directory: directory) do
+          path = image_lab_temp_paths(directory).fetch(0)
+          raise "client disconnected"
+        end
+      end
+
+      assert_not File.exist?(path)
+      assert_empty image_lab_temp_paths(directory)
+    end
+  end
+
+  test "does not translate a Vips processing error into an invalid upload" do
+    with_image_lab_temp_directory do |directory|
+      assert_raises(Vips::Error) do
+        ImageLab::Input.with_image(StringIO.new(rgb_image.write_to_buffer(".png")), temporary_directory: directory) do
+          raise Vips::Error, "pipeline failed"
+        end
+      end
+
+      assert_empty image_lab_temp_paths(directory)
+    end
+  end
+
   private
 
   def rgb_image
@@ -72,5 +168,13 @@ class ImageLab::InputTest < ActiveSupport::TestCase
     yield
   ensure
     previous.each { |key, value| value.nil? ? ENV.delete(key) : ENV[key] = value }
+  end
+
+  def image_lab_temp_paths(directory)
+    Dir.children(directory).map { |name| File.join(directory, name) }
+  end
+
+  def with_image_lab_temp_directory
+    Dir.mktmpdir("image-lab-test-", Rails.root.join("tmp")) { |directory| yield directory }
   end
 end

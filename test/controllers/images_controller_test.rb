@@ -25,19 +25,28 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "capabilities report the v1 empty operation set" do
+  test "capabilities report the implemented operation set" do
     get "/images/capabilities", headers: authenticated_headers, as: :json
 
     assert_response :success
     assert_equal(
       {
         "version" => "v1",
-        "operations" => [],
+        "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale brightness contrast saturation tint blur sharpen background],
         "request_content_type" => "multipart/form-data",
-        "response_content_type" => "image/png"
+        "response_content_type" => "image/png",
+        "response_content_types" => %w[image/png image/jpeg image/webp]
       },
       json_response
     )
+  end
+
+  test "capabilities report the exact supported response content types" do
+    get "/images/capabilities", headers: authenticated_headers, as: :json
+
+    assert_response :success
+    assert_equal %w[image/png image/jpeg image/webp], json_response.fetch("response_content_types")
+    assert_equal "image/png", json_response.fetch("response_content_type")
   end
 
   test "processing rejects a missing image" do
@@ -62,7 +71,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "processing rejects an unregistered operation" do
-    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"resize_to_fit"}]' }, headers: authenticated_headers
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"unknown_operation"}]' }, headers: authenticated_headers
 
     assert_response :unprocessable_entity
     assert json_response.fetch("error").present?
@@ -75,6 +84,31 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert json_response.fetch("error").present?
+  end
+
+  test "processing applies a registered operation" do
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"resize_to_fill","width":2,"height":2}]' }, headers: authenticated_headers
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal "2", response.headers.fetch("X-Image-Width")
+    assert_equal "2", response.headers.fetch("X-Image-Height")
+  end
+
+  test "processing applies a registered color operation" do
+    post "/images/process", params: { image: tiny_png_upload, operations: '[{"op":"brightness","amount":-1.0}]' }, headers: authenticated_headers
+
+    assert_response :success
+    result = Vips::Image.new_from_buffer(response.body, "")
+    assert_equal [ 0.0, 0.0, 0.0 ], result.getpoint(0, 0)
+  end
+
+  test "processing encodes an explicit WebP quality" do
+    post "/images/process", params: { image: tiny_png_upload, operations: "[]", format: "webp", quality: "80" }, headers: authenticated_headers
+
+    assert_response :success
+    assert_equal "image/webp", response.media_type
+    assert_equal "webp", response.headers.fetch("X-Image-Format")
   end
 
   test "processing maps invalid and unsupported uploads to JSON 422" do
@@ -117,6 +151,20 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "png", response.headers.fetch("X-Image-Format")
     assert_operator response.headers.fetch("X-Processing-Time-Ms").to_i, :>=, 0
     assert response.body.start_with?("\x89PNG\r\n\x1A\n".b)
+  end
+
+  test "processing normalizes EXIF orientation and never returns GPS metadata" do
+    post "/images/process", params: {
+      image: upload_from_bytes(exif_orientation_with_gps_jpeg, "oriented.jpg"),
+      operations: "[]",
+      format: "jpeg",
+      preserve_metadata: "true"
+    }, headers: authenticated_headers
+
+    assert_response :success
+    output = Vips::Image.new_from_buffer(response.body, "")
+    assert_equal [ 1, 2 ], [ output.width, output.height ]
+    assert_empty output.get_fields.grep(/exif|gps|orientation|comment/i)
   end
 
   private
