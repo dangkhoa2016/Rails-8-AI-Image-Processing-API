@@ -1,19 +1,29 @@
 # Release roadmap
 
-Rails 8 AI Image Processing API has no published release yet. Its versioning
-and release evidence start independently from the imported root commit.
+## Current version marker
 
-## Planned milestones
+`v1.0.0` is the only project version. It is a mutable local release marker:
+after the required validation succeeds on a later clean `main` commit,
+`script/refresh_v1_0_0_tag.sh` replaces the local annotated tag.
 
-- `v0.1.0`: authenticated deterministic image-processing API backed directly by ruby-vips and libvips.
-- `v0.2.0`: hardened and benchmarked deterministic image processing.
-- `v0.3.0`: CPU-only U²-NetP background removal, if ONNX Runtime qualification succeeds.
-- `v0.4.0`: optional interactive segmentation only if the MobileSAM Ruby/ONNX feasibility gate passes.
-- `v1.0.0`: only after API stability, security boundaries, CI, CPU/RAM qualification, deployment reproducibility, and model provenance are complete.
+No remote tag, GitHub Release, image publication, or deployment is created by
+this process. Resolve its exact current target with:
+
+```sh
+git rev-parse v1.0.0^{commit}
+```
 
 ## Release rules
 
-- Create no tag or GitHub release until the relevant milestone is implemented and independently verified.
-- Use an immutable semantic-version tag on the exact reviewed `main` commit.
-- Record observed test, security, benchmark, and deployment evidence with the release; do not claim evidence that has not been collected.
-- Preserve `CHANGELOG.md` as this project's release history. Upstream records under `docs/history/` are attribution only.
+- Run the documented validation before refreshing the marker and record the
+  observed results in the acceptance record.
+- Refresh only local `v1.0.0` from a clean `main` checkout with
+  `script/refresh_v1_0_0_tag.sh`; the tag is intentionally movable after a
+  later successful validation.
+- Preserve `CHANGELOG.md` as this project's release history. Upstream records
+  under `docs/history/` are attribution only.
+- Do not infer a remote release, registry image, deployment, AI qualification,
+  or production-traffic qualification from this local marker.
+
+See [the v1.0.0 acceptance record](releases/v1.0.0-acceptance.md) for scope,
+evidence, and non-evidence.

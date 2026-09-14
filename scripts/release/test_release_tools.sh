@@ -83,14 +83,14 @@ fi
 RELEASE_PROCESS_EN="${SCRIPT_DIR}/../../docs/RELEASE_PROCESS.md"
 RELEASE_PROCESS_VI="${SCRIPT_DIR}/../../docs/RELEASE_PROCESS.vi.md"
 if grep -Fq '# Release roadmap' "${RELEASE_PROCESS_EN}" &&
-   grep -Fq '`v0.1.0`' "${RELEASE_PROCESS_EN}" &&
-   grep -Fq 'has no published release yet' "${RELEASE_PROCESS_EN}" &&
+   grep -Fq '`v1.0.0`' "${RELEASE_PROCESS_EN}" &&
+   grep -Fq 'mutable local release marker' "${RELEASE_PROCESS_EN}" &&
    grep -Fq '# Lộ trình release' "${RELEASE_PROCESS_VI}" &&
-   grep -Fq '`v0.1.0`' "${RELEASE_PROCESS_VI}" &&
-   grep -Fq 'chưa có release được công bố' "${RELEASE_PROCESS_VI}"; then
-  ok "release roadmap starts with independent prereleases"
+   grep -Fq '`v1.0.0`' "${RELEASE_PROCESS_VI}" &&
+   grep -Fq 'mốc release local có thể di chuyển' "${RELEASE_PROCESS_VI}"; then
+  ok "release roadmap declares the mutable local v1.0.0 marker"
 else
-  bad "release roadmap starts with independent prereleases"
+  bad "release roadmap declares the mutable local v1.0.0 marker"
 fi
 
 HF_DOCKERFILE="${SCRIPT_DIR}/../../deploy/huggingface/Dockerfile"
@@ -114,6 +114,8 @@ if [[ -x "${SMOKE_SCRIPT}" ]]; then
     ok "smoke verifier rejects incomplete credentials"
   fi
 fi
+
+expect_success "mutable local v1.0.0 tag contract" bash "${SCRIPT_DIR}/test_refresh_v1_0_0_tag.sh"
 
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]

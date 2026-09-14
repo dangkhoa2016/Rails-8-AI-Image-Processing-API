@@ -283,6 +283,8 @@ jobs:
       - name: Validate release tooling syntax
         run: |
           bash -n scripts/release/lib.sh
+          bash -n script/refresh_v1_0_0_tag.sh
+          bash -n scripts/release/test_refresh_v1_0_0_tag.sh
           bash -n scripts/release/test_release_tools.sh
           bash -n scripts/release/verify_repository.sh
           bash -n scripts/release/verify_ghcr.sh

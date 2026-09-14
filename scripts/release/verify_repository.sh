@@ -8,6 +8,7 @@ required=(
   CHANGELOG.md
   docs/RELEASE_PROCESS.md
   docs/RELEASE_PROCESS.vi.md
+  docs/releases/v1.0.0-acceptance.md
   deploy/beam/Dockerfile
   deploy/beam/app.py
   deploy/beam/entrypoint.sh
@@ -19,9 +20,11 @@ required=(
   deploy/huggingface/README.md
   deploy/huggingface/README.vi.md
   scripts/release/lib.sh
+  scripts/release/test_refresh_v1_0_0_tag.sh
   scripts/release/test_release_tools.sh
   scripts/release/verify_ghcr.sh
   scripts/release/smoke_deployment.sh
+  script/refresh_v1_0_0_tag.sh
 )
 
 for path in "${required[@]}"; do
@@ -30,9 +33,6 @@ done
 
 grep -Eq '^  push:$' .github/workflows/ci.yml
 grep -Eq '^    branches: \[main\]$|^      - main$' .github/workflows/ci.yml
-
-grep -Fq '6897c773ec1321401e52c21c63870a72d01ca349' docs/RELEASE_PROCESS.md
-grep -Fq '1d842b18c1d1b07c027cbb7d49c19a52d16f98bc' docs/RELEASE_PROCESS.md
 
 if grep -REn 'T[B]D|T[O]DO|implement later|fill in details' \
   CHANGELOG.md docs/RELEASE_PROCESS.md docs/RELEASE_PROCESS.vi.md deploy; then
@@ -51,6 +51,8 @@ if grep -REn '(postgres(ql)?://[^[:space:]]+:[^[:space:]@]+@|RAILS_MASTER_KEY=.+
 fi
 
 bash -n scripts/release/lib.sh
+bash -n script/refresh_v1_0_0_tag.sh
+bash -n scripts/release/test_refresh_v1_0_0_tag.sh
 bash -n scripts/release/test_release_tools.sh
 bash -n scripts/release/verify_ghcr.sh
 bash -n scripts/release/smoke_deployment.sh

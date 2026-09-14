@@ -5,16 +5,19 @@
 
 > Ngôn ngữ: [English](README.md) | **Tiếng Việt**
 
-Một Rails 8 API có xác thực, đang được phát triển cho xử lý ảnh xác định và các thao tác AI nhẹ, chạy CPU. Ứng dụng hiện giữ nguyên baseline xác thực được import; các endpoint xử lý ảnh được chủ động để sang những giai đoạn chuyên biệt tiếp theo.
+Một Rails 8 API có xác thực cho xử lý ảnh xác định. Project cung cấp xử lý trực
+tiếp bằng `ruby-vips`/libvips và không đưa AI runtime hoặc model artifact vào
+ứng dụng.
 
 ## Trạng thái project
 
-Repository đang ở giai đoạn thiết lập nhận diện độc lập.
+Repository có deterministic image-processing API có xác thực và một local
+release marker.
 
 - Baseline Devise, JWT, refresh token, PostgreSQL, Rack::Attack và security test vẫn được giữ nguyên.
-- Stack xử lý ảnh xác định trong tương lai sẽ dùng trực tiếp `ruby-vips` và libvips. Gem `image_processing` không thuộc kiến trúc này.
+- `GET /images/capabilities` và authenticated multipart `POST /images/process` cung cấp xử lý Vips xác định cho JPEG, PNG và WebP. Gem `image_processing` không thuộc kiến trúc này.
 - Chưa thêm AI runtime, ONNX Runtime, model artifact, GPU dependency hoặc Python inference service.
-- Project chưa có release tag hay deployment production được xác nhận.
+- `v1.0.0` là mutable local release marker duy nhất; nó không đại diện remote release hoặc production deployment.
 
 ## Nguồn gốc project
 
@@ -50,7 +53,8 @@ rails_8_ai_image_processing_api_development
 rails_8_ai_image_processing_api_test
 ```
 
-Chạy ứng dụng bằng `bin/dev`. Các route xác thực được import vẫn là API public hiện tại; xem `config/routes.rb` và tài liệu xác thực để biết contract chính xác.
+Chạy ứng dụng bằng `bin/dev`. Xem các image route có xác thực và authentication
+route trong `config/routes.rb` để biết contract chính xác.
 
 ## Kiểm tra
 
@@ -68,6 +72,7 @@ bin/brakeman --no-pager
 - [Rate limiting](docs/RATE_LIMITING.md)
 - [Kế hoạch deployment](docs/DEPLOYMENT.vi.md)
 - [Lộ trình release](docs/RELEASE_PROCESS.vi.md)
+- [Acceptance record v1.0.0](docs/releases/v1.0.0-acceptance.md)
 - [Changelog project](CHANGELOG.md)
 - [Tài liệu upstream lịch sử](docs/history/README.md)
 

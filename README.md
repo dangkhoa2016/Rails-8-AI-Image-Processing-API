@@ -5,16 +5,19 @@
 
 > Language: **English** | [Tiếng Việt](README.vi.md)
 
-An authenticated Rails 8 API being developed for deterministic image manipulation and lightweight CPU-only AI-assisted image operations. The application currently retains the imported authentication baseline; image-processing endpoints are intentionally not available until their dedicated phases.
+An authenticated Rails 8 API for deterministic image manipulation. It delivers
+direct `ruby-vips`/libvips processing while keeping AI runtimes and model
+artifacts out of the application.
 
 ## Project status
 
-This repository is in its independent project-identity phase.
+This repository has a deterministic authenticated image-processing API and a
+local release marker.
 
 - The Devise, JWT, refresh-token, PostgreSQL, Rack::Attack, and security test baseline remains in place.
-- The future deterministic image stack will use `ruby-vips` directly with libvips. The `image_processing` gem is intentionally not part of the architecture.
+- `GET /images/capabilities` and authenticated multipart `POST /images/process` provide deterministic Vips processing for JPEG, PNG, and WebP. The `image_processing` gem is intentionally not part of the architecture.
 - No AI runtime, ONNX Runtime, model artifact, GPU dependency, or Python inference service has been added.
-- No release tag or production deployment is established for this project.
+- `v1.0.0` is the sole mutable local release marker; it does not represent a remote release or production deployment.
 
 ## Project origin
 
@@ -50,7 +53,8 @@ rails_8_ai_image_processing_api_development
 rails_8_ai_image_processing_api_test
 ```
 
-Run the application with `bin/dev`. The imported authentication routes remain the current public API surface; consult `config/routes.rb` and the authentication documentation for the exact contract.
+Run the application with `bin/dev`. Use the authenticated image routes and the
+authentication routes described in `config/routes.rb` for the exact contract.
 
 ## Verification
 
@@ -68,6 +72,7 @@ bin/brakeman --no-pager
 - [Rate limiting](docs/RATE_LIMITING.md)
 - [Deployment planning](docs/DEPLOYMENT.md)
 - [Release roadmap](docs/RELEASE_PROCESS.md)
+- [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Project changelog](CHANGELOG.md)
 - [Upstream historical records](docs/history/README.md)
 
