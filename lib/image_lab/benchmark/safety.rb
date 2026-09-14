@@ -20,6 +20,35 @@ module ImageLab
         first = peaks.first
         peaks.length == 5 && first.is_a?(Numeric) && first.positive? && peaks.last <= first * 1.15 + 16.megabytes
       end
+
+      def mem_available_bytes(proc_reader: method(:proc_mem_available_bytes), cgroup_reader: method(:cgroup_mem_available_bytes))
+        [ proc_reader.call, cgroup_reader.call ].compact.min
+      end
+
+      def proc_mem_available_bytes
+        match = File.read("/proc/meminfo").match(/^MemAvailable:\s+(\d+)\s+kB$/)
+        match && match[1].to_i * 1024
+      rescue Errno::ENOENT
+        nil
+      end
+
+      def cgroup_mem_available_bytes
+        limit = cgroup_memory_limit_bytes
+        return unless limit
+
+        [ limit - Integer(File.read("/sys/fs/cgroup/memory.current").strip, 10), 0 ].max
+      rescue Errno::ENOENT, ArgumentError
+        nil
+      end
+
+      def cgroup_memory_limit_bytes
+        value = File.read("/sys/fs/cgroup/memory.max").strip
+        return if value == "max"
+
+        Integer(value, 10)
+      rescue Errno::ENOENT, ArgumentError
+        nil
+      end
     end
   end
 end

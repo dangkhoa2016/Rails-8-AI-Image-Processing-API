@@ -11,4 +11,13 @@ class ImageLabBenchmarkSafetyTest < ActiveSupport::TestCase
     assert ImageLab::Benchmark::Safety.rss_growth_pass?(peaks:)
     assert_not ImageLab::Benchmark::Safety.rss_growth_pass?(peaks: peaks.first(4) + [ 132.megabytes ])
   end
+
+  test "uses the lower cgroup headroom when the runtime has a memory limit" do
+    available = ImageLab::Benchmark::Safety.mem_available_bytes(
+      proc_reader: -> { 2.gigabytes },
+      cgroup_reader: -> { 512.megabytes }
+    )
+
+    assert_equal 512.megabytes, available
+  end
 end
