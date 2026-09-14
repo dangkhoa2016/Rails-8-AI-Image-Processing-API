@@ -2,11 +2,10 @@
 
 require "fileutils"
 require "vips"
+require_relative "fixture"
 
 module ImageLab
   module Benchmark
-    Fixture = Data.define(:name, :path, :format, :bytes, :width, :height, :alpha)
-
     module Corpus
       module_function
 

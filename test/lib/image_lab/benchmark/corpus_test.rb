@@ -5,6 +5,12 @@ require "fileutils"
 require "tmpdir"
 
 class ImageLabBenchmarkCorpusTest < ActiveSupport::TestCase
+  test "autoloads the fixture record without first loading the corpus" do
+    fixture = ImageLab::Benchmark::Fixture.new("fixture", "/tmp/fixture.png", "png", 1, 1, 1, false)
+
+    assert_equal "fixture", fixture.name
+  end
+
   test "creates every required source class with its documented dimensions" do
     Dir.mktmpdir("vips-benchmark-parent") do |parent|
       fixtures = ImageLab::Benchmark::Corpus.create!(directory: File.join(parent, "vips-corpus"))
