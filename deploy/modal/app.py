@@ -4,8 +4,10 @@ import subprocess
 
 import modal
 
-APP_NAME = "rails-8-api-authentication"
+APP_NAME = "rails-8-ai-image-processing-api"
 SECRET_NAME = "rails-api-production"
+MODEL_VOLUME_NAME = "rails-8-ai-image-processing-models"
+MODEL_MOUNT_PATH = "/rails/var/models"
 PORT = 4000
 
 if modal.is_local():
@@ -44,6 +46,7 @@ runtime_secret = modal.Secret.from_name(
         "PUBLIC_DEMO_EMAIL_GUARD",
     ],
 )
+model_volume = modal.Volume.from_name(MODEL_VOLUME_NAME, create_if_missing=False)
 
 app = modal.App(APP_NAME)
 
@@ -51,8 +54,9 @@ app = modal.App(APP_NAME)
 @app.function(
     image=image,
     secrets=[runtime_secret],
-    cpu=1.0,
-    memory=1024,
+    volumes={MODEL_MOUNT_PATH: model_volume.with_mount_options(read_only=True)},
+    cpu=2.0,
+    memory=10240,
     min_containers=0,
     max_containers=1,
     buffer_containers=0,
@@ -60,7 +64,9 @@ app = modal.App(APP_NAME)
     env={
         "RAILS_ENV": "production",
         "PORT": str(PORT),
+        "WEB_CONCURRENCY": "1",
         "RAILS_MAX_THREADS": "3",
+        "IMAGE_AI_MAX_CONCURRENCY": "1",
         "RACK_ATTACK_CACHE_STORE": "memory",
         "SOLID_QUEUE_IN_PUMA": "true",
         "JOB_CONCURRENCY": "1",
