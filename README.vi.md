@@ -16,7 +16,7 @@ release marker.
 
 - Baseline Devise, JWT, refresh token, PostgreSQL, Rack::Attack và security test vẫn được giữ nguyên.
 - `GET /images/capabilities` và authenticated multipart `POST /images/process` cung cấp xử lý Vips xác định cho JPEG, PNG và WebP. Gem `image_processing` không thuộc kiến trúc này.
-- Feasibility spike ONNX Runtime CPU chỉ cho test kiểm tra sigmoid fixture 105 byte có checksum cố định. Nó không thêm U²-NetP hay model thật khác, API endpoint, job, GPU dependency hoặc Python inference service; xem [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md).
+- Feasibility spike ONNX Runtime CPU chỉ cho test kiểm tra sigmoid fixture 105 byte có checksum cố định. U²-NetP nay có provenance và recipe conversion checksum-pinned do operator chạy, nhưng vẫn không có model binary, API endpoint, job, GPU dependency hoặc Python inference service; xem [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md).
 - `v1.0.0` là mutable local release marker duy nhất; nó không đại diện remote release hoặc production deployment.
 
 ## Nguồn gốc project
@@ -73,6 +73,7 @@ bin/brakeman --no-pager
 - [Kế hoạch deployment](docs/DEPLOYMENT.vi.md)
 - [Lộ trình release](docs/RELEASE_PROCESS.vi.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
+- [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
 - [Acceptance record v1.0.0](docs/releases/v1.0.0-acceptance.md)
 - [Changelog project](CHANGELOG.md)
 - [Tài liệu upstream lịch sử](docs/history/README.md)

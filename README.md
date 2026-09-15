@@ -16,7 +16,7 @@ local release marker.
 
 - The Devise, JWT, refresh-token, PostgreSQL, Rack::Attack, and security test baseline remains in place.
 - `GET /images/capabilities` and authenticated multipart `POST /images/process` provide deterministic Vips processing for JPEG, PNG, and WebP. The `image_processing` gem is intentionally not part of the architecture.
-- A test-only ONNX Runtime CPU spike validates a checksum-pinned 105-byte sigmoid fixture. It adds no U²-NetP or other real model, API endpoint, job, GPU dependency, or Python inference service; see [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md).
+- A test-only ONNX Runtime CPU spike validates a checksum-pinned 105-byte sigmoid fixture. U²-NetP now has an operator-run, checksum-pinned provenance and conversion recipe, but no model binary, API endpoint, job, GPU dependency, or Python inference service; see [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md).
 - `v1.0.0` is the sole mutable local release marker; it does not represent a remote release or production deployment.
 
 ## Project origin
@@ -73,6 +73,7 @@ bin/brakeman --no-pager
 - [Deployment planning](docs/DEPLOYMENT.md)
 - [Release roadmap](docs/RELEASE_PROCESS.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
+- [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
 - [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Project changelog](CHANGELOG.md)
 - [Upstream historical records](docs/history/README.md)

@@ -18,6 +18,7 @@ test-reports
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
+/var/models/
 !/log/.keep
 !/tmp/.keep
 

@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+manifest_path="$repository_root/config/models/u2netp.yml"
+model_directory="$repository_root/var/models"
+
+usage() {
+  printf '%s\n' 'Usage: script/models/fetch_u2netp [--manifest PATH] [--model-directory PATH]'
+}
+
+while (( $# > 0 )); do
+  case "$1" in
+    --manifest)
+      manifest_path="${2:?--manifest requires a path}"
+      shift 2
+      ;;
+    --model-directory)
+      model_directory="${2:?--model-directory requires a path}"
+      shift 2
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'unknown option: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+cd "$repository_root"
+mapfile -t source_weights < <(
+  MANIFEST_PATH="$manifest_path" bundle exec ruby -r ./config/environment -e '
+    manifest = ImageLab::AI::U2netpManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+    weights = manifest.data.fetch("source_weights")
+    puts weights.fetch("url")
+    puts weights.fetch("filename")
+  '
+)
+
+if (( ${#source_weights[@]} != 2 )); then
+  printf '%s\n' 'manifest validation failed' >&2
+  exit 1
+fi
+
+url="${source_weights[0]}"
+filename="${source_weights[1]}"
+mkdir -p "$model_directory"
+temporary_directory="$(mktemp -d "$model_directory/.u2netp-fetch.XXXXXX")"
+trap 'rm -rf "$temporary_directory"' EXIT
+temporary_path="$temporary_directory/$filename"
+final_path="$model_directory/$filename"
+
+if ! curl --fail --location --retry 3 --output "$temporary_path" "$url"; then
+  printf '%s\n' 'download failed' >&2
+  exit 1
+fi
+
+if ! MANIFEST_PATH="$manifest_path" ARTIFACT_PATH="$temporary_path" bundle exec ruby -r ./config/environment -e '
+  manifest = ImageLab::AI::U2netpManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+  manifest.verify_artifact!(path: ENV.fetch("ARTIFACT_PATH"), kind: :source_weights)
+'; then
+  printf '%s\n' 'download verification failed' >&2
+  exit 1
+fi
+
+mv -f "$temporary_path" "$final_path"
+printf 'fetched=%s\n' "$final_path"
