@@ -48,6 +48,25 @@ git -C "${repo}" commit -qm 'docs: refresh evidence'
 expect_success "moves only v1.0.0 to a later clean main commit" env RELEASE_REPOSITORY="${repo}" "${REFRESH}"
 [[ "$(git -C "${repo}" rev-parse 'v1.0.0^{commit}' 2>/dev/null)" == "$(git -C "${repo}" rev-parse HEAD)" ]] && ok "moved tag resolves to latest HEAD" || bad "moved tag resolves to latest HEAD"
 
+git -C "${repo}" switch -q -c corrective
+printf 'validated corrective evidence\n' > "${repo}/evidence.txt"
+git -C "${repo}" add evidence.txt
+git -C "${repo}" commit -qm 'docs: add validated corrective evidence'
+expect_failure "rejects a clean corrective branch by default" env RELEASE_REPOSITORY="${repo}" "${REFRESH}"
+expect_success "allows an explicit clean descendant of main" \
+  env RELEASE_REPOSITORY="${repo}" RELEASE_ALLOW_VALIDATED_DESCENDANT=1 RELEASE_BASE_REF=main "${REFRESH}"
+[[ "$(git -C "${repo}" rev-parse 'v1.0.0^{commit}' 2>/dev/null)" == "$(git -C "${repo}" rev-parse HEAD)" ]] && ok "descendant tag resolves to HEAD" || bad "descendant tag resolves to HEAD"
+git -C "${repo}" switch -q main
+
+git -C "${repo}" switch -q --orphan unrelated
+mkdir -p "${repo}/docs/releases"
+printf '# `v1.0.0` acceptance\n\nResolve target: `git rev-parse v1.0.0^{commit}`\n' > "${repo}/docs/releases/v1.0.0-acceptance.md"
+git -C "${repo}" add docs/releases/v1.0.0-acceptance.md
+git -C "${repo}" commit -qm 'docs: create unrelated candidate'
+expect_failure "rejects an explicit branch not descended from main" \
+  env RELEASE_REPOSITORY="${repo}" RELEASE_ALLOW_VALIDATED_DESCENDANT=1 RELEASE_BASE_REF=main "${REFRESH}"
+git -C "${repo}" switch -q main
+
 git -C "${repo}" rm -q docs/releases/v1.0.0-acceptance.md
 git -C "${repo}" commit -qm 'docs: remove acceptance record'
 expect_failure "rejects a clean checkout without acceptance evidence" env RELEASE_REPOSITORY="${repo}" "${REFRESH}"

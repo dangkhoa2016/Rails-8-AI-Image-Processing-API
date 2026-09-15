@@ -19,7 +19,11 @@ git rev-parse v1.0.0^{commit}
   observed results in the acceptance record.
 - Refresh only local `v1.0.0` from a clean `main` checkout with
   `script/refresh_v1_0_0_tag.sh`; the tag is intentionally movable after a
-  later successful validation.
+  later successful validation. A validated corrective descendant may use the
+  explicit `RELEASE_ALLOW_VALIDATED_DESCENDANT=1` mode, optionally selecting
+  its ancestor with `RELEASE_BASE_REF` (default `main`). This exception still
+  requires a clean worktree and acceptance evidence; arbitrary branches and
+  candidates not descended from the base are rejected.
 - Preserve `CHANGELOG.md` as this project's release history. Upstream records
   under `docs/history/` are attribution only.
 - Do not infer a remote release, registry image, deployment, AI qualification,
