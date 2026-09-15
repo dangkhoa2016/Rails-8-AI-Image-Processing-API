@@ -6,8 +6,8 @@
 > Language: **English** | [Tiếng Việt](README.vi.md)
 
 An authenticated Rails 8 API for deterministic image manipulation. It delivers
-direct `ruby-vips`/libvips processing while keeping AI runtimes and model
-artifacts out of the application.
+direct `ruby-vips`/libvips processing and includes a test-only ONNX Runtime CPU
+feasibility spike; it does not expose AI processing in the application API.
 
 ## Project status
 
@@ -16,7 +16,7 @@ local release marker.
 
 - The Devise, JWT, refresh-token, PostgreSQL, Rack::Attack, and security test baseline remains in place.
 - `GET /images/capabilities` and authenticated multipart `POST /images/process` provide deterministic Vips processing for JPEG, PNG, and WebP. The `image_processing` gem is intentionally not part of the architecture.
-- No AI runtime, ONNX Runtime, model artifact, GPU dependency, or Python inference service has been added.
+- A test-only ONNX Runtime CPU spike validates a checksum-pinned 105-byte sigmoid fixture. It adds no U²-NetP or other real model, API endpoint, job, GPU dependency, or Python inference service; see [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md).
 - `v1.0.0` is the sole mutable local release marker; it does not represent a remote release or production deployment.
 
 ## Project origin
@@ -72,6 +72,7 @@ bin/brakeman --no-pager
 - [Rate limiting](docs/RATE_LIMITING.md)
 - [Deployment planning](docs/DEPLOYMENT.md)
 - [Release roadmap](docs/RELEASE_PROCESS.md)
+- [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Project changelog](CHANGELOG.md)
 - [Upstream historical records](docs/history/README.md)
