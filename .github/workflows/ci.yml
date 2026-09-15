@@ -136,6 +136,7 @@ jobs:
           COVERAGE: "1"
         run: |
           bin/rails db:prepare
+          bin/rails test test/services/image_lab/ai/model_registry_test.rb
           bin/rails test
 
       - name: Generate coverage badge

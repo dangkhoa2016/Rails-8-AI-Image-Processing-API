@@ -6,8 +6,8 @@
 > Ngôn ngữ: [English](README.md) | **Tiếng Việt**
 
 Một Rails 8 API có xác thực cho xử lý ảnh xác định. Project cung cấp xử lý trực
-tiếp bằng `ruby-vips`/libvips và không đưa AI runtime hoặc model artifact vào
-ứng dụng.
+tiếp bằng `ruby-vips`/libvips và có feasibility spike ONNX Runtime CPU chỉ cho
+test; application API không cung cấp xử lý AI.
 
 ## Trạng thái project
 
@@ -16,7 +16,7 @@ release marker.
 
 - Baseline Devise, JWT, refresh token, PostgreSQL, Rack::Attack và security test vẫn được giữ nguyên.
 - `GET /images/capabilities` và authenticated multipart `POST /images/process` cung cấp xử lý Vips xác định cho JPEG, PNG và WebP. Gem `image_processing` không thuộc kiến trúc này.
-- Chưa thêm AI runtime, ONNX Runtime, model artifact, GPU dependency hoặc Python inference service.
+- Feasibility spike ONNX Runtime CPU chỉ cho test kiểm tra sigmoid fixture 105 byte có checksum cố định. Nó không thêm U²-NetP hay model thật khác, API endpoint, job, GPU dependency hoặc Python inference service; xem [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md).
 - `v1.0.0` là mutable local release marker duy nhất; nó không đại diện remote release hoặc production deployment.
 
 ## Nguồn gốc project
@@ -72,6 +72,7 @@ bin/brakeman --no-pager
 - [Rate limiting](docs/RATE_LIMITING.md)
 - [Kế hoạch deployment](docs/DEPLOYMENT.vi.md)
 - [Lộ trình release](docs/RELEASE_PROCESS.vi.md)
+- [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [Acceptance record v1.0.0](docs/releases/v1.0.0-acceptance.md)
 - [Changelog project](CHANGELOG.md)
 - [Tài liệu upstream lịch sử](docs/history/README.md)
