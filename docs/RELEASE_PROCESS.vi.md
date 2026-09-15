@@ -19,11 +19,14 @@ git rev-parse v1.0.0^{commit}
   quả quan sát được trong acceptance record.
 - Chỉ làm mới local `v1.0.0` từ checkout `main` sạch bằng
   `script/refresh_v1_0_0_tag.sh`; tag này được chủ đích cho phép di chuyển sau
-  một validation thành công khác. Corrective descendant đã được validation có
-  thể dùng mode tường minh `RELEASE_ALLOW_VALIDATED_DESCENDANT=1`, và có thể
-  chọn ancestor qua `RELEASE_BASE_REF` (mặc định là `main`). Ngoại lệ này vẫn
-  bắt buộc worktree sạch và acceptance evidence; branch tùy ý hoặc candidate
-  không là descendant của base đều bị từ chối.
+  một validation thành công khác. Corrective descendant sạch có thể dùng mode
+  tường minh `RELEASE_ALLOW_VALIDATED_DESCENDANT=1` cùng
+  `RELEASE_BASE_REF` (mặc định là `main`) và assertion đầy đủ
+  `RELEASE_VALIDATED_HEAD=<SHA HEAD hiện tại>`. Script yêu cầu assertion này
+  khớp chính xác HEAD hiện tại; đây là assertion của caller, không phải bằng
+  chứng độc lập rằng validation đã chạy. Ngoại lệ này vẫn bắt buộc worktree
+  sạch và acceptance evidence; branch tùy ý hoặc candidate không là
+  descendant của base đều bị từ chối.
 - Giữ `CHANGELOG.md` là lịch sử release của project. Các tài liệu upstream
   trong `docs/history/` chỉ phục vụ attribution.
 - Không suy diễn remote release, registry image, deployment, AI qualification
