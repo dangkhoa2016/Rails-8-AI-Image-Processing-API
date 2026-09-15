@@ -34,10 +34,19 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
         "version" => "v1",
         "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale brightness contrast saturation tint blur sharpen background],
         "request_content_type" => "multipart/form-data",
-        "response_content_type" => "image/png"
+        "response_content_type" => "image/png",
+        "response_content_types" => %w[image/png image/jpeg image/webp]
       },
       json_response
     )
+  end
+
+  test "capabilities report the exact supported response content types" do
+    get "/images/capabilities", headers: authenticated_headers, as: :json
+
+    assert_response :success
+    assert_equal %w[image/png image/jpeg image/webp], json_response.fetch("response_content_types")
+    assert_equal "image/png", json_response.fetch("response_content_type")
   end
 
   test "processing rejects a missing image" do

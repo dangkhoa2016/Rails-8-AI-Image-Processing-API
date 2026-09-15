@@ -29,12 +29,20 @@ Returns the capabilities that are actually available at the time of the request:
     "brightness", "contrast", "saturation", "tint", "blur", "sharpen", "background"
   ],
   "request_content_type": "multipart/form-data",
-  "response_content_type": "image/png"
+  "response_content_type": "image/png",
+  "response_content_types": [
+    "image/png",
+    "image/jpeg",
+    "image/webp"
+  ]
 }
 ```
 
-The endpoint derives this list from the explicit registry and must not advertise
-another operation.
+The endpoint derives the operation list from the explicit registry and must not
+advertise another operation. `response_content_type` is the default output
+format; `response_content_types` is the exact set of output MIME types the
+encoder supports (`png`, `jpeg`, `webp`). Neither list may include a format the
+encoder does not implement.
 
 ### `POST /images/process`
 
@@ -145,7 +153,8 @@ in-memory PNG bytes and no mocks:
 2. authenticated invalid input and malformed/unsupported operations return `422`;
 3. a tiny PNG processed with a registered color operation returns transformed
    PNG bytes, `Cache-Control: no-store`, and the declared metadata headers;
-4. capabilities returns exactly the explicit registry set.
+4. capabilities returns exactly the explicit registry set and the exact
+   supported output MIME list (`image/png`, `image/jpeg`, `image/webp`);
 5. a real EXIF-orientation JPEG with GPS data is rotated correctly and returns
    without EXIF, GPS, or orientation metadata.
 

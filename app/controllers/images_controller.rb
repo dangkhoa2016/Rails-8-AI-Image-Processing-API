@@ -23,7 +23,8 @@ class ImagesController < ApplicationController
       version: "v1",
       operations: ImageLab::OperationRegistry.available,
       request_content_type: "multipart/form-data",
-      response_content_type: "image/png"
+      response_content_type: "image/png",
+      response_content_types: %w[image/png image/jpeg image/webp]
     }
   end
 
