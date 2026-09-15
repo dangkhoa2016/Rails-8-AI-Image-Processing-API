@@ -22,6 +22,26 @@ expect_failure() {
   if "$@"; then bad "$label"; else ok "$label"; fi
 }
 
+verify_rejects_unavailable_git_metadata() {
+  local fixture output rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+
+  cp -a "${SCRIPT_DIR}/../.." "${fixture}/repository"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${fixture}/repository/deploy/beam/test_deploy.sh"
+  chmod +x "${fixture}/repository/deploy/beam/test_deploy.sh"
+
+  set +e
+  output="$(GIT_DIR=/definitely/missing bash "${fixture}/repository/scripts/release/verify_repository.sh" 2>&1)"
+  rc=$?
+  set -e
+
+  rm -rf "${fixture}"
+  trap - RETURN
+
+  [[ "${rc}" -ne 0 ]] && ! grep -Fxq 'PASS repository release contract' <<<"${output}"
+}
+
 REV="6897c773ec1321401e52c21c63870a72d01ca349"
 
 MULTIARCH_OK="$(cat <<JSON
@@ -116,6 +136,9 @@ if [[ -x "${SMOKE_SCRIPT}" ]]; then
 fi
 
 expect_success "mutable local v1.0.0 tag contract" bash "${SCRIPT_DIR}/test_refresh_v1_0_0_tag.sh"
+
+expect_success "repository verifier rejects unavailable Git metadata without a PASS marker" \
+  verify_rejects_unavailable_git_metadata
 
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
