@@ -135,33 +135,29 @@ end
 
 def protected_manual_file?(line)
   _meta, path = line.split("\t", 2)
-  path && !path.end_with?(".sh")
+  path && protected_manual_path?(path)
 end
 
-def manual_file_map(ref)
-  git("ls-tree", "-r", ref, "--", "manual")
-    .lines.map(&:chomp)
-    .select { |line| protected_manual_file?(line) }
-    .to_h do |line|
-      meta, path = line.split("\t", 2)
-      [ path, meta.split(" ")[2] ]
-    end
+def protected_manual_path?(path)
+  path.start_with?("manual/") && !path.end_with?(".sh")
 end
 
 def check_manual(ref, base)
   return unless base
 
-  ref_map = manual_file_map(ref)
-  base_map = manual_file_map(base)
-  (ref_map.keys | base_map.keys).each do |path|
-    fail_check("manual", "protected file #{path} changed since #{base}") if ref_map[path] != base_map[path]
+  git("rev-list", "--reverse", "#{base}..#{ref}").lines.map(&:chomp).each do |commit|
+    changed_paths = git("diff-tree", "--root", "-m", "--no-commit-id", "--name-only", "-r", commit, "--", "manual")
+                    .lines.map(&:chomp).select { |path| protected_manual_path?(path) }.uniq
+    changed_paths.each do |path|
+      fail_check("manual", "protected file #{path} changed in #{commit} after #{base}")
+    end
   end
 end
 
 def manual_paths_in_history(ref)
   git("log", ref, "--name-only", "--format=", "--", "manual")
     .lines.map(&:chomp)
-    .select { |path| path.start_with?("manual/") && !path.end_with?(".sh") }
+    .select { |path| protected_manual_path?(path) }
     .uniq
 end
 
