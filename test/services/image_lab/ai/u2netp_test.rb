@@ -4,7 +4,7 @@ require "test_helper"
 require "vips"
 
 class ImageLab::AI::U2netpTest < ActiveSupport::TestCase
-  test "preprocesses into the manifest input and returns a source-sized mask" do
+  test "passes the ONNX input feed as the positional hash rather than keyword run options" do
     model = RecordingModel.new("d0" => constant_output(2.0))
     image = rgb_image(width: 6, height: 4)
 
@@ -15,8 +15,11 @@ class ImageLab::AI::U2netpTest < ActiveSupport::TestCase
       limiter: ImageLab::AI::U2netp::InferenceLimiter.new(1)
     )
 
-    assert_equal [ "input" ], model.request.keys
-    assert_equal [ 1, 3, 320, 320 ], nested_shape(model.request.fetch("input"))
+    assert_instance_of Hash, model.input_feed
+    assert_equal [ "input" ], model.input_feed.keys
+    assert_equal({}, model.run_options)
+    assert_nil model.output_names
+    assert_equal [ 1, 3, 320, 320 ], nested_shape(model.input_feed.fetch("input"))
     assert_equal [ 6, 4, 1, :float ], [ mask.image.width, mask.image.height, mask.image.bands, mask.image.format ]
     assert_equal Array.new(24, 0.0), mask.image.write_to_memory.unpack("f*")
   end
@@ -70,14 +73,16 @@ class ImageLab::AI::U2netpTest < ActiveSupport::TestCase
   private
 
   class RecordingModel
-    attr_reader :request
+    attr_reader :input_feed, :output_names, :run_options
 
     def initialize(response)
       @response = response
     end
 
-    def predict(request)
-      @request = request
+    def predict(input_feed, output_names: nil, **run_options)
+      @input_feed = input_feed
+      @output_names = output_names
+      @run_options = run_options
       @response
     end
   end
