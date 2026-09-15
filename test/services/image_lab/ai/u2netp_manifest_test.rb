@@ -17,7 +17,13 @@ class ImageLab::AI::U2netpManifestTest < ActiveSupport::TestCase
       manifest = ImageLab::AI::U2netpManifest.load!(path: manifest_path)
 
       assert_equal "u2netp", manifest.name
+      assert_equal "input", manifest.input_name
       assert_equal [ 1, 3, 320, 320 ], manifest.input_shape
+      assert_equal "tensor(float)", manifest.input_dtype
+      assert_equal "d0", manifest.output_name
+      assert_equal [ 1, 1, 320, 320 ], manifest.output_shape
+      assert_equal "tensor(float)", manifest.output_dtype
+      assert_equal "u2netp.onnx", manifest.onnx_filename
       assert_nil manifest.verify_artifact!(path: artifact_path, kind: :onnx)
     end
   end

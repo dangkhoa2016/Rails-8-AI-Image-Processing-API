@@ -15,8 +15,32 @@ module ImageLab
           data.fetch("name")
         end
 
+        def input_name
+          data.fetch("input_name")
+        end
+
         def input_shape
           data.fetch("input_shape")
+        end
+
+        def input_dtype
+          data.fetch("input_dtype")
+        end
+
+        def output_name
+          data.fetch("output_name")
+        end
+
+        def output_shape
+          data.fetch("output_shape")
+        end
+
+        def output_dtype
+          data.fetch("output_dtype")
+        end
+
+        def onnx_filename
+          data.fetch("onnx").fetch("filename")
         end
 
         def verify_artifact!(path:, kind:)
