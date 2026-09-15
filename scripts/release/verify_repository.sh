@@ -4,6 +4,11 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo 'FAIL repository release verification requires a valid Git worktree' >&2
+  exit 1
+fi
+
 required=(
   CHANGELOG.md
   docs/RELEASE_PROCESS.md
@@ -40,7 +45,12 @@ if grep -REn 'T[B]D|T[O]DO|implement later|fill in details' \
   exit 1
 fi
 
-if git ls-files deploy | grep -E '(^|/)(production\.key|master\.key)$|(^|/)credentials/.*\.key$'; then
+tracked_deploy_files="$(git ls-files -- deploy)" || {
+  echo 'FAIL unable to enumerate tracked deploy files' >&2
+  exit 1
+}
+
+if grep -Eq '(^|/)(production\.key|master\.key)$|(^|/)credentials/.*\.key$' <<<"${tracked_deploy_files}"; then
   echo 'FAIL tracked private key path under deploy/' >&2
   exit 1
 fi
