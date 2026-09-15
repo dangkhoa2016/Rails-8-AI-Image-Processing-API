@@ -42,6 +42,41 @@ verify_rejects_unavailable_git_metadata() {
   [[ "${rc}" -ne 0 ]] && ! grep -Fxq 'PASS repository release contract' <<<"${output}"
 }
 
+verify_rejects_tracked_deploy_file_enumeration_failure() {
+  local fixture fake_bin real_git output rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  fake_bin="${fixture}/fake-bin"
+  real_git="$(command -v git)"
+
+  cp -a "${SCRIPT_DIR}/../.." "${fixture}/repository"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${fixture}/repository/deploy/beam/test_deploy.sh"
+  chmod +x "${fixture}/repository/deploy/beam/test_deploy.sh"
+  mkdir -p "${fake_bin}"
+  cat > "${fake_bin}/git" <<'SH'
+#!/usr/bin/env sh
+if [ "$1" = "ls-files" ] && [ "$2" = "--" ] && [ "$3" = "deploy" ]; then
+  echo 'forced ls-files failure' >&2
+  exit 42
+fi
+
+exec "${REAL_GIT_BIN}" "$@"
+SH
+  chmod +x "${fake_bin}/git"
+
+  set +e
+  output="$(PATH="${fake_bin}:${PATH}" REAL_GIT_BIN="${real_git}" bash "${fixture}/repository/scripts/release/verify_repository.sh" 2>&1)"
+  rc=$?
+  set -e
+
+  rm -rf "${fixture}"
+  trap - RETURN
+
+  [[ "${rc}" -ne 0 ]] &&
+    grep -Fxq 'FAIL unable to enumerate tracked deploy files' <<<"${output}" &&
+    ! grep -Fxq 'PASS repository release contract' <<<"${output}"
+}
+
 REV="6897c773ec1321401e52c21c63870a72d01ca349"
 
 MULTIARCH_OK="$(cat <<JSON
@@ -139,6 +174,9 @@ expect_success "mutable local v1.0.0 tag contract" bash "${SCRIPT_DIR}/test_refr
 
 expect_success "repository verifier rejects unavailable Git metadata without a PASS marker" \
   verify_rejects_unavailable_git_metadata
+
+expect_success "repository verifier rejects tracked deploy-file enumeration failure without a PASS marker" \
+  verify_rejects_tracked_deploy_file_enumeration_failure
 
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
