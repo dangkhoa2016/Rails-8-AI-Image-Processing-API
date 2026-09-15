@@ -2,8 +2,9 @@
 
 This repository has a Ruby/Vips preprocessing boundary for the pinned upstream
 U²-NetP contract. It converts an already decoded `Vips::Image` into a finite
-float32 tensor. It does **not** load an ONNX model or add U²-NetP inference to
-the Rails application.
+float32 tensor consumed by the internal Phase 17 inference service described in
+[U²-NetP CPU inference and foreground masks](U2NETP_INFERENCE.md). It does not
+add an application API endpoint or background composition.
 
 ## Frozen contract
 
@@ -58,8 +59,10 @@ It has no runtime relationship with Rails.
 
 ## Deliberate boundary
 
-No runtime Python process, PTH/ONNX artifact, U²-NetP model registry entry,
-model download, API route, controller, job, GPU configuration, or production
-inference claim is introduced here. CI runs only the local Ruby/Vips Tensor,
-preprocessor, manifest, and script-safety tests; it does not build the Python
-image, download weights, execute model qualification, or write `var/models/`.
+No runtime Python process, model download, API route, controller, job, GPU
+configuration, or production inference claim is introduced by preprocessing.
+The separate inference service can load only a previously verified ignored
+local ONNX artifact. CI runs only local Ruby/Vips Tensor, preprocessor,
+manifest, script-safety, inference, and mask tests; it does not build the
+Python image, download weights, execute model qualification, or write
+`var/models/`.

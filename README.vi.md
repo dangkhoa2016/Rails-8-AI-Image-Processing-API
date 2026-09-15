@@ -16,7 +16,7 @@ release marker.
 
 - Baseline Devise, JWT, refresh token, PostgreSQL, Rack::Attack và security test vẫn được giữ nguyên.
 - `GET /images/capabilities` và authenticated multipart `POST /images/process` cung cấp xử lý Vips xác định cho JPEG, PNG và WebP. Gem `image_processing` không thuộc kiến trúc này.
-- Feasibility spike ONNX Runtime CPU chỉ cho test kiểm tra sigmoid fixture 105 byte có checksum cố định. U²-NetP nay có provenance, recipe conversion checksum-pinned do operator chạy và preprocessing parity Ruby/Vips, nhưng vẫn không có model binary, registry integration, API endpoint, job, GPU dependency hoặc Python inference service; xem [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md) và [U²-NetP preprocessing parity](docs/U2NETP_PREPROCESSING.md).
+- Feasibility spike ONNX Runtime CPU chỉ cho test kiểm tra sigmoid fixture 105 byte có checksum cố định. U²-NetP nay có provenance checksum-pinned, preprocessing Ruby/Vips và service nội bộ CPU inference/mask chỉ nhận local artifact ignored đã được xác minh. Project không có model binary trong Git, API endpoint, job, GPU dependency, Python inference service hoặc background compositing; xem [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md), [U²-NetP preprocessing parity](docs/U2NETP_PREPROCESSING.md) và [CPU inference/foreground mask](docs/U2NETP_INFERENCE.md).
 - `v1.0.0` là mutable local release marker duy nhất; nó không đại diện remote release hoặc production deployment.
 
 ## Nguồn gốc project
@@ -75,6 +75,7 @@ bin/brakeman --no-pager
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
 - [U²-NetP preprocessing parity](docs/U2NETP_PREPROCESSING.md)
+- [U²-NetP CPU inference và foreground mask](docs/U2NETP_INFERENCE.md)
 - [Acceptance record v1.0.0](docs/releases/v1.0.0-acceptance.md)
 - [Changelog project](CHANGELOG.md)
 - [Tài liệu upstream lịch sử](docs/history/README.md)

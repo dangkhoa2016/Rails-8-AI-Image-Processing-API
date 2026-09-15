@@ -16,7 +16,7 @@ local release marker.
 
 - The Devise, JWT, refresh-token, PostgreSQL, Rack::Attack, and security test baseline remains in place.
 - `GET /images/capabilities` and authenticated multipart `POST /images/process` provide deterministic Vips processing for JPEG, PNG, and WebP. The `image_processing` gem is intentionally not part of the architecture.
-- A test-only ONNX Runtime CPU spike validates a checksum-pinned 105-byte sigmoid fixture. U²-NetP has checksum-pinned provenance, a conversion recipe, and Ruby/Vips preprocessing parity, but no model binary, registry integration, API endpoint, job, GPU dependency, or Python inference service; see [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md) and [U²-NetP preprocessing parity](docs/U2NETP_PREPROCESSING.md).
+- A test-only ONNX Runtime CPU spike validates a checksum-pinned 105-byte sigmoid fixture. U²-NetP has checksum-pinned provenance, Ruby/Vips preprocessing, and an internal CPU inference/mask service that accepts only a verified ignored local artifact. It has no model binary in Git, API endpoint, job, GPU dependency, Python inference service, or background-compositing behavior; see [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md), [preprocessing parity](docs/U2NETP_PREPROCESSING.md), and [CPU inference and foreground masks](docs/U2NETP_INFERENCE.md).
 - `v1.0.0` is the sole mutable local release marker; it does not represent a remote release or production deployment.
 
 ## Project origin
@@ -75,6 +75,7 @@ bin/brakeman --no-pager
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
 - [U²-NetP preprocessing parity](docs/U2NETP_PREPROCESSING.md)
+- [U²-NetP CPU inference and foreground masks](docs/U2NETP_INFERENCE.md)
 - [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Project changelog](CHANGELOG.md)
 - [Upstream historical records](docs/history/README.md)

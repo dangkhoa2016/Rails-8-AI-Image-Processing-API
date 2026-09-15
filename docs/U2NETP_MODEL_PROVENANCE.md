@@ -1,8 +1,10 @@
 # U²-NetP model provenance
 
 This repository records a reproducible, operator-run build path for the
-upstream U²-NetP checkpoint. It does **not** add U²-NetP inference to the Rails
-application, an API endpoint, a job, GPU support, or a model binary in Git.
+upstream U²-NetP checkpoint. The internal Phase 17 service can load a verified
+local ONNX artifact; it does **not** add an API endpoint, a job, GPU support,
+or a model binary in Git. See [U²-NetP CPU inference and foreground
+masks](U2NETP_INFERENCE.md) for the runtime boundary.
 
 `config/models/u2netp.yml` is the checked-in source of truth. It records the
 upstream revision, direct checkpoint URL, checksums and byte sizes, conversion
@@ -69,6 +71,5 @@ changes the checked-in manifest.
 
 CI runs only local manifest and script tests. It does not execute qualification,
 download U²-NetP weights, build the converter image, or write `var/models/`.
-Future inference work must load `U2netpManifest`, revalidate the local artifact
-at its boundary, and keep failures behind the generic `AI model is unavailable`
-application error.
+The inference service revalidates the local artifact at its boundary and keeps
+failures behind the generic `AI model is unavailable` application error.

@@ -18,6 +18,7 @@
 - [ONNX Runtime feasibility](ONNX_RUNTIME_FEASIBILITY.md)
 - [U²-NetP model provenance](U2NETP_MODEL_PROVENANCE.md)
 - [U²-NetP preprocessing parity](U2NETP_PREPROCESSING.md)
+- [U²-NetP CPU inference and foreground masks](U2NETP_INFERENCE.md)
 - [v1.0.0 acceptance record](releases/v1.0.0-acceptance.md)
 - [Project changelog](../CHANGELOG.md)
 
