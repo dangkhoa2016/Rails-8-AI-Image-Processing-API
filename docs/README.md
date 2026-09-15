@@ -17,6 +17,7 @@
 - [Release roadmap — Tiếng Việt](RELEASE_PROCESS.vi.md)
 - [ONNX Runtime feasibility](ONNX_RUNTIME_FEASIBILITY.md)
 - [U²-NetP model provenance](U2NETP_MODEL_PROVENANCE.md)
+- [U²-NetP preprocessing parity](U2NETP_PREPROCESSING.md)
 - [v1.0.0 acceptance record](releases/v1.0.0-acceptance.md)
 - [Project changelog](../CHANGELOG.md)
 

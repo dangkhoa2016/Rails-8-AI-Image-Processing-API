@@ -137,7 +137,7 @@ jobs:
         run: |
           bin/rails db:prepare
           bin/rails test test/services/image_lab/ai/model_registry_test.rb
-          bin/rails test test/services/image_lab/ai/u2netp_manifest_test.rb test/scripts/convert_u2netp_to_onnx_test.rb test/scripts/qualify_u2netp_test.rb test/scripts/fetch_u2netp_test.rb
+          bin/rails test test/services/image_lab/ai/u2netp_manifest_test.rb test/services/image_lab/ai/tensor_test.rb test/services/image_lab/ai/u2netp/preprocessor_test.rb test/scripts/convert_u2netp_to_onnx_test.rb test/scripts/qualify_u2netp_test.rb test/scripts/fetch_u2netp_test.rb test/scripts/generate_u2netp_preprocessing_reference_test.rb
           bin/rails test
 
       - name: Generate coverage badge
