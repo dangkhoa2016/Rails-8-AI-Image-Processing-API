@@ -18,4 +18,12 @@ class ImageLabOperationsFlipTest < ActiveSupport::TestCase
     assert_equal [ 0, 255, 0 ], ImageLab::Operations::Flip.call(image, { "op" => "flip", "mode" => "vertical" }).getpoint(0, 0)
     assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Flip.call(image, { "op" => "flip", "mode" => "diagonal" }) }
   end
+
+  test "rejects unknown flip parameters" do
+    image = Vips::Image.new_from_memory([ 255, 0, 0, 0, 255, 0 ].pack("C*"), 1, 2, 3, :uchar)
+
+    assert_raises(ImageLab::Errors::InvalidOperation) do
+      ImageLab::Operations::Flip.call(image, { "op" => "flip", "mode" => "vertical", "unexpected" => true })
+    end
+  end
 end

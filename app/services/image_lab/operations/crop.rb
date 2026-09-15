@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require_relative "../errors"
+require_relative "parameters"
 
 module ImageLab
   module Operations
     class Crop
       def self.call(image, operation)
+        Parameters.exact!(operation, "crop", %w[left top width height])
+
         left = coordinate!(operation, "left")
         top = coordinate!(operation, "top")
         width = dimension!(operation, "width")

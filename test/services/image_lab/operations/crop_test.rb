@@ -27,4 +27,15 @@ class ImageLabOperationsCropTest < ActiveSupport::TestCase
       assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Crop.call(image, operation) }
     end
   end
+
+  test "rejects unknown crop parameters" do
+    image = Vips::Image.new_from_memory(Array.new(12, 255).pack("C*"), 2, 2, 3, :uchar)
+
+    assert_raises(ImageLab::Errors::InvalidOperation) do
+      ImageLab::Operations::Crop.call(
+        image,
+        { "op" => "crop", "left" => 0, "top" => 0, "width" => 1, "height" => 1, "unexpected" => true }
+      )
+    end
+  end
 end

@@ -28,6 +28,16 @@ class ImageLabOperationsResizeTest < ActiveSupport::TestCase
     end
   end
 
+  test "resize to fit rejects unknown parameters" do
+    assert_raises(ImageLab::Errors::InvalidOperation) do
+      ImageLab::Operations::ResizeToFit.call(
+        rgb_image(width: 2, height: 1),
+        { "op" => "resize_to_fit", "width" => 2, "height" => 1, "unexpected" => true },
+        max_dimension: 8
+      )
+    end
+  end
+
   test "resize to fill covers the requested dimensions" do
     result = ImageLab::Operations::ResizeToFill.call(
       rgb_image(width: 4, height: 2),
@@ -43,6 +53,16 @@ class ImageLabOperationsResizeTest < ActiveSupport::TestCase
       ImageLab::Operations::ResizeToFill.call(
         rgb_image(width: 2, height: 1),
         { "op" => "resize_to_fill", "width" => 9, "height" => 1 },
+        max_dimension: 8
+      )
+    end
+  end
+
+  test "resize to fill rejects unknown parameters" do
+    assert_raises(ImageLab::Errors::InvalidOperation) do
+      ImageLab::Operations::ResizeToFill.call(
+        rgb_image(width: 2, height: 1),
+        { "op" => "resize_to_fill", "width" => 2, "height" => 1, "unexpected" => true },
         max_dimension: 8
       )
     end

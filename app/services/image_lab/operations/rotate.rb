@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "../errors"
+require_relative "parameters"
 
 module ImageLab
   module Operations
@@ -8,6 +9,8 @@ module ImageLab
       ANGLES = { 90 => :d90, 180 => :d180, 270 => :d270 }.freeze
 
       def self.call(image, operation)
+        Parameters.exact!(operation, "rotate", %w[degrees])
+
         degrees = operation["degrees"] if operation.is_a?(Hash)
         angle = ANGLES[degrees]
         raise Errors::InvalidOperation, "degrees must be 90, 180, or 270" unless angle

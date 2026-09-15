@@ -20,4 +20,12 @@ class ImageLabOperationsRotateTest < ActiveSupport::TestCase
     assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Rotate.call(image, { "op" => "rotate", "degrees" => 45 }) }
     assert_raises(ImageLab::Errors::InvalidOperation) { ImageLab::Operations::Rotate.call(image, { "op" => "rotate", "degrees" => "90" }) }
   end
+
+  test "rejects unknown rotate parameters" do
+    image = Vips::Image.new_from_memory(Array.new(18, 255).pack("C*"), 2, 3, 3, :uchar)
+
+    assert_raises(ImageLab::Errors::InvalidOperation) do
+      ImageLab::Operations::Rotate.call(image, { "op" => "rotate", "degrees" => 90, "unexpected" => true })
+    end
+  end
 end

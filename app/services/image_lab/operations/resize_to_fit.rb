@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
 require_relative "../errors"
+require_relative "parameters"
 
 module ImageLab
   module Operations
     class ResizeToFit
       def self.call(image, operation, max_dimension: 8_192)
+        Parameters.exact!(operation, "resize_to_fit", %w[width height])
+
         image.thumbnail_image(
           dimension!(operation, "width", max_dimension),
           height: dimension!(operation, "height", max_dimension)
