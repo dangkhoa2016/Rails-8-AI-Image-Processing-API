@@ -46,8 +46,8 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     out.chomp
   end
 
-  def run_checker(*args)
-    Open3.capture3(CHECKER, *args, chdir: @dir)
+  def run_checker(*args, env: {})
+    Open3.capture3({ "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil }.merge(env), CHECKER, *args, chdir: @dir)
   end
 
   test "accepts a valid repository" do
@@ -59,6 +59,17 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     _out, _err, status = run_checker("HEAD")
 
     assert status.success?
+  end
+
+  test "accepts valid UTF-8 Git output under a POSIX locale" do
+    commit(
+      subject: "docs: thêm ghi chú phát hành",
+      body: "- Preserve UTF-8 commit metadata under a POSIX caller locale\n"
+    )
+
+    output, error, status = run_checker("HEAD", env: { "LANG" => "C", "LC_ALL" => "C" })
+
+    assert status.success?, [ output, error ].join("\n")
   end
 
   test "rejects a tracked lockfile" do

@@ -37,8 +37,17 @@ REQUIRED_ACTION_VERSIONS = {
 
 @violations = []
 
+def normalize_utf8(value, label)
+  normalized = value.dup.force_encoding(Encoding::UTF_8)
+  raise "#{label} is not valid UTF-8" unless normalized.valid_encoding?
+
+  normalized
+end
+
 def git(*args)
   out, err, status = Open3.capture3("git", *args)
+  out = normalize_utf8(out, "git stdout")
+  err = normalize_utf8(err, "git stderr")
   raise "git #{args.join(' ')} failed: #{err}" unless status.success?
 
   out
