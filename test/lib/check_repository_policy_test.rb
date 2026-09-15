@@ -191,6 +191,17 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     assert status.success?
   end
 
+  test "accepts legacy manual history when auditing a later range" do
+    commit(subject: "docs: add manual file", body: "- Add protected file\n", files: { "manual/tracker.md" => "original\n" })
+    commit(subject: "docs: amend manual file", body: "- Preserve accepted legacy history\n", files: { "manual/tracker.md" => "legacy\n" })
+    base = head_sha
+    commit(subject: "feat: add later code", body: "- Audit only new commits\n", files: { "app/models/user.rb" => "class User\nend\n" })
+
+    _output, _error, status = run_checker("HEAD", base)
+
+    assert status.success?
+  end
+
   test "rejects a commit dated in the future" do
     future = (Time.now.utc + 2.days).iso8601
     commit(

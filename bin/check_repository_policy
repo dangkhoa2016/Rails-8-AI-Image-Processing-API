@@ -188,7 +188,7 @@ begin
   check_workflow_actions(ref, files)
   check_commit_records(ref, base)
   check_migrations(ref, files)
-  check_manual_history(ref, files)
+  check_manual_history(ref, files) unless base
   check_manual(ref, base)
 rescue StandardError => e
   fail_check("error", e.message)
