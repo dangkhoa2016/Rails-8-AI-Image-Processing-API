@@ -6,6 +6,8 @@
   direct ruby-vips/libvips operations and explicit processing limits.
 - Image-operation validation, metadata stripping, tempfile lifecycle handling,
   and image-specific rate limiting.
+- U²-NetP Ruby/Vips preprocessing parity with a compact upstream-reference
+  fixture; this does not add application inference.
 - `v1.0.0` is a mutable local marker, not a published remote release or
   deployment.
 
