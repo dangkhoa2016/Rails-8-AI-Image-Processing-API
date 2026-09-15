@@ -24,6 +24,14 @@ class ImageLabPipelineTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects an oversized unchanged image when operations are empty" do
+    image = Vips::Image.new_from_memory(Array.new(12, 255).pack("C*"), 2, 2, 3, :uchar)
+
+    assert_raises(ImageLab::Errors::OutputLimitExceeded) do
+      ImageLab::Pipeline.call(image, [], max_output_pixels: 3)
+    end
+  end
+
   test "chains grayscale and background through the registered pipeline" do
     image = Vips::Image.new_from_memory([ 100, 150, 200, 128 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
 
