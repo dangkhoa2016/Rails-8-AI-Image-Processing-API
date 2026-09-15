@@ -33,7 +33,7 @@ module ImageLab
       def self.call(image, manifest: U2netpManifest.load!, model: ModelRegistry.fetch!(:u2netp), limiter: nil)
         limiter ||= default_limiter
         tensor = Preprocessor.call(image, manifest:)
-        response = limiter.with_token { model.predict(manifest.input_name => nested_values(tensor.values.dup, tensor.shape)) }
+        response = limiter.with_token { model.predict({ manifest.input_name => nested_values(tensor.values.dup, tensor.shape) }) }
 
         Mask.new(output: response.fetch(manifest.output_name), source_width: image.width, source_height: image.height)
       rescue ImageLab::Errors::AiUnavailable
