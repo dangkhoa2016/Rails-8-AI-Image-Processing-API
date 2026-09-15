@@ -9,10 +9,21 @@ TAG="v1.0.0"
 
 current_branch="$(git -C "${REPOSITORY}" branch --show-current)"
 base_ref="${RELEASE_BASE_REF:-main}"
+TARGET="$(git -C "${REPOSITORY}" rev-parse HEAD)"
 
 if [[ "${current_branch}" != "main" ]]; then
   [[ "${RELEASE_ALLOW_VALIDATED_DESCENDANT:-0}" == "1" ]] || {
     printf 'FAIL refresh requires main unless validated-descendant mode is explicitly enabled\n' >&2
+    exit 1
+  }
+
+  [[ "${RELEASE_VALIDATED_HEAD:-}" =~ ^[0-9a-f]{40}$ ]] || {
+    printf 'FAIL validated-descendant mode requires RELEASE_VALIDATED_HEAD as a full lowercase commit SHA\n' >&2
+    exit 1
+  }
+
+  [[ "${RELEASE_VALIDATED_HEAD}" == "${TARGET}" ]] || {
+    printf 'FAIL RELEASE_VALIDATED_HEAD does not match the current HEAD\n' >&2
     exit 1
   }
 
@@ -44,7 +55,6 @@ grep -Fq 'git rev-parse v1.0.0^{commit}' "${ACCEPTANCE}" || {
   exit 1
 }
 
-TARGET="$(git -C "${REPOSITORY}" rev-parse HEAD)"
 TIMESTAMP="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 git -C "${REPOSITORY}" tag -fa "${TAG}" -m "Mutable local release marker ${TAG}
 
