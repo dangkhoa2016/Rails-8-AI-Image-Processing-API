@@ -22,6 +22,7 @@ class ImageLab::AI::TensorTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { ImageLab::AI::Tensor.new(shape: [ 1, 2 ], values: [ 1.0 ]) }
     assert_raises(ArgumentError) { ImageLab::AI::Tensor.new(shape: [ 1 ], values: [ Float::NAN ]) }
     assert_raises(ArgumentError) { ImageLab::AI::Tensor.new(shape: [ 1 ], values: [ Float::INFINITY ]) }
+    assert_raises(ArgumentError) { ImageLab::AI::Tensor.new(shape: [ 1 ], values: [ Float::MAX ]) }
     assert_raises(IndexError) { ImageLab::AI::Tensor.new(shape: [ 1 ], values: [ 1.0 ]).at(1) }
   end
 end

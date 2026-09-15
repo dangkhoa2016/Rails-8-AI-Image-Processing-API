@@ -12,8 +12,12 @@ module ImageLab
         raise ArgumentError, "tensor values do not match shape" unless materialized_values.length == @count
         raise ArgumentError, "tensor values must be finite" unless materialized_values.all?(&:finite?)
 
-        @bytes = materialized_values.pack("e*").freeze
-        @values = @bytes.unpack("e*").freeze
+        bytes = materialized_values.pack("e*")
+        serialized_values = bytes.unpack("e*")
+        raise ArgumentError, "tensor values must fit float32" unless serialized_values.all?(&:finite?)
+
+        @bytes = bytes.freeze
+        @values = serialized_values.freeze
       end
 
       def count
