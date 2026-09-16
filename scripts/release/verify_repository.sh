@@ -9,6 +9,11 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo 'FAIL python3 is required for repository release verification' >&2
+  exit 1
+fi
+
 required=(
   CHANGELOG.md
   docs/RELEASE_PROCESS.md
@@ -70,7 +75,7 @@ bash -n deploy/beam/entrypoint.sh
 bash -n deploy/beam/deploy.sh
 bash -n deploy/beam/test_deploy.sh
 ruby -c deploy/beam/beam_logging.rb >/dev/null
-python -m py_compile deploy/beam/app.py
+python3 -m py_compile deploy/beam/app.py
 bash deploy/beam/test_deploy.sh
 
 echo 'PASS repository release contract'

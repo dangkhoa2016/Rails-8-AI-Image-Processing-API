@@ -110,6 +110,7 @@ jobs:
             git \
             libvips \
             libpq-dev \
+            python3 \
             pkg-config
 
       - name: Checkout code
@@ -188,6 +189,7 @@ jobs:
             git \
             libvips \
             libpq-dev \
+            python3 \
             pkg-config
 
       - name: Checkout code
@@ -243,6 +245,7 @@ jobs:
             git \
             libvips \
             libpq-dev \
+            python3 \
             pkg-config
 
       - name: Checkout code
