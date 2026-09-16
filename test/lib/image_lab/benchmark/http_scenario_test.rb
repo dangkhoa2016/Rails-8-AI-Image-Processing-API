@@ -4,8 +4,24 @@ require "test_helper"
 require "tmpdir"
 
 class ImageLabBenchmarkHttpScenarioTest < ActiveSupport::TestCase
+  test "observes the scratch authority used by real image requests by default" do
+    observed_directories = []
+
+    ImageLab::Benchmark::HttpScenario.stub(:scratch_entries, lambda { |directory|
+      observed_directories << directory
+      []
+    }) do
+      with_corpus_fixture do |fixture|
+        ImageLab::Benchmark::HttpScenario.call(fixture:)
+      end
+    end
+
+    assert_equal [ ImageLab::Input.default_temporary_directory, ImageLab::Input.default_temporary_directory ],
+                 observed_directories
+  end
+
   test "processes a real authenticated multipart fixture and cleans scratch storage" do
-    scratch_directory = Rails.root.join("tmp/image_lab")
+    scratch_directory = ImageLab::Input.default_temporary_directory
     before = scratch_entries(scratch_directory)
 
     with_corpus_fixture do |fixture|
