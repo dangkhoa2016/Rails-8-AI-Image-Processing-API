@@ -47,7 +47,8 @@ module ActiveSupport
 
     # Run tests in parallel with specified workers
     # (single-process when measuring coverage so SimpleCov results are complete)
-    parallelize(workers: :number_of_processors) unless ENV["COVERAGE"]
+    parallel_workers = ENV["PARALLEL_WORKERS"] ? Integer(ENV.fetch("PARALLEL_WORKERS"), 10) : :number_of_processors
+    parallelize(workers: parallel_workers) unless ENV["COVERAGE"]
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
