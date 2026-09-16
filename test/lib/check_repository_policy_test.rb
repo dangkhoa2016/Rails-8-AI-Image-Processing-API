@@ -99,6 +99,29 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     assert_match(/bullet/, out)
   end
 
+  test "rejects a real commit body with literal escaped newlines" do
+    commit(
+      subject: "test: malformed body",
+      body: "- First reason.\\n- Second reason."
+    )
+
+    out, _err, status = run_checker("HEAD")
+
+    assert_not status.success?
+    assert_match(/literal escaped newline/, out)
+  end
+
+  test "accepts a real commit body with physical newline-separated bullets" do
+    commit(
+      subject: "test: well formed body",
+      body: "- First reason.\n- Second reason."
+    )
+
+    _out, _err, status = run_checker("HEAD")
+
+    assert status.success?
+  end
+
   test "rejects mismatched author and committer dates" do
     commit(
       subject: "feat: backdated commit",
