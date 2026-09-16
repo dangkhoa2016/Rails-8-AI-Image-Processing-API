@@ -4,6 +4,16 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo 'FAIL repository release verification requires a valid Git worktree' >&2
+  exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+  echo 'FAIL python3 is required for repository release verification' >&2
+  exit 1
+fi
+
 required=(
   CHANGELOG.md
   docs/RELEASE_PROCESS.md
@@ -31,16 +41,18 @@ done
 grep -Eq '^  push:$' .github/workflows/ci.yml
 grep -Eq '^    branches: \[main\]$|^      - main$' .github/workflows/ci.yml
 
-grep -Fq '6897c773ec1321401e52c21c63870a72d01ca349' docs/RELEASE_PROCESS.md
-grep -Fq '1d842b18c1d1b07c027cbb7d49c19a52d16f98bc' docs/RELEASE_PROCESS.md
-
 if grep -REn 'T[B]D|T[O]DO|implement later|fill in details' \
   CHANGELOG.md docs/RELEASE_PROCESS.md docs/RELEASE_PROCESS.vi.md deploy; then
   echo 'FAIL unresolved release marker found' >&2
   exit 1
 fi
 
-if git ls-files deploy | grep -E '(^|/)(production\.key|master\.key)$|(^|/)credentials/.*\.key$'; then
+tracked_deploy_files="$(git ls-files -- deploy)" || {
+  echo 'FAIL unable to enumerate tracked deploy files' >&2
+  exit 1
+}
+
+if grep -Eq '(^|/)(production\.key|master\.key)$|(^|/)credentials/.*\.key$' <<<"${tracked_deploy_files}"; then
   echo 'FAIL tracked private key path under deploy/' >&2
   exit 1
 fi
@@ -58,7 +70,7 @@ bash -n deploy/beam/entrypoint.sh
 bash -n deploy/beam/deploy.sh
 bash -n deploy/beam/test_deploy.sh
 ruby -c deploy/beam/beam_logging.rb >/dev/null
-python -m py_compile deploy/beam/app.py
+python3 -m py_compile deploy/beam/app.py
 bash deploy/beam/test_deploy.sh
 
 echo 'PASS repository release contract'

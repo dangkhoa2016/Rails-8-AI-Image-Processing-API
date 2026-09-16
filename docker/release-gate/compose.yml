@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:17.11@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: rails_8_ai_image_processing_api_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rails_8_ai_image_processing_api_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  gate:
+    build:
+      context: ../..
+      dockerfile: docker/release-gate/Dockerfile
+    environment:
+      RAILS_ENV: test
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
+    volumes:
+      - ../..:/workspace
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["bash"]

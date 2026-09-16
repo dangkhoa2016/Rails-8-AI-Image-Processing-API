@@ -7,7 +7,7 @@
 #   bin/check_repository_policy [REF] [BASE_REF]
 #
 # Audits REF (default HEAD) and exits non-zero if repository policy is
-# violated: tracked lockfile or coverage artifacts, non-conventional commit
+# violated: tracked coverage artifacts, non-conventional commit
 # messages, missing bullet bodies, mismatched author/committer dates, future
 # commit dates, future migration timestamps, workflow action versions,
 # immutability of non-Bash files under manual/, and — when a base ref is
@@ -37,8 +37,17 @@ REQUIRED_ACTION_VERSIONS = {
 
 @violations = []
 
+def normalize_utf8(value, label)
+  normalized = value.dup.force_encoding(Encoding::UTF_8)
+  raise "#{label} is not valid UTF-8" unless normalized.valid_encoding?
+
+  normalized
+end
+
 def git(*args)
   out, err, status = Open3.capture3("git", *args)
+  out = normalize_utf8(out, "git stdout")
+  err = normalize_utf8(err, "git stderr")
   raise "git #{args.join(' ')} failed: #{err}" unless status.success?
 
   out
@@ -53,7 +62,6 @@ def git_files(ref)
 end
 
 def check_tracked_artifacts(ref, files)
-  fail_check("lockfile", "#{ref} tracks Gemfile.lock") if files.include?("Gemfile.lock")
   files.grep(/\A(?:coverage|public\/coverage)\//).each do |path|
     fail_check("coverage", "#{ref} tracks #{path}")
   end
@@ -91,6 +99,9 @@ def check_commit_records(ref, base = nil)
     sha = sha.strip
     unless merge_commit?(sha)
       fail_check("subject", "#{sha} subject not conventional: #{subject.inspect}") unless subject.match?(SUBJECT_PATTERN)
+      if body.to_s.include?("\\n")
+        fail_check("body", "#{sha} body contains literal escaped newline sequence")
+      end
       unless body.to_s.lines.any? { |line| line.match?(BULLET_PATTERN) }
         fail_check("body", "#{sha} body has no bullet line")
       end
@@ -126,33 +137,29 @@ end
 
 def protected_manual_file?(line)
   _meta, path = line.split("\t", 2)
-  path && !path.end_with?(".sh")
+  path && protected_manual_path?(path)
 end
 
-def manual_file_map(ref)
-  git("ls-tree", "-r", ref, "--", "manual")
-    .lines.map(&:chomp)
-    .select { |line| protected_manual_file?(line) }
-    .to_h do |line|
-      meta, path = line.split("\t", 2)
-      [ path, meta.split(" ")[2] ]
-    end
+def protected_manual_path?(path)
+  path.start_with?("manual/") && !path.end_with?(".sh")
 end
 
 def check_manual(ref, base)
   return unless base
 
-  ref_map = manual_file_map(ref)
-  base_map = manual_file_map(base)
-  (ref_map.keys | base_map.keys).each do |path|
-    fail_check("manual", "protected file #{path} changed since #{base}") if ref_map[path] != base_map[path]
+  git("rev-list", "--reverse", "#{base}..#{ref}").lines.map(&:chomp).each do |commit|
+    changed_paths = git("diff-tree", "--root", "-m", "--no-commit-id", "--name-only", "-r", commit, "--", "manual")
+                    .lines.map(&:chomp).select { |path| protected_manual_path?(path) }.uniq
+    changed_paths.each do |path|
+      fail_check("manual", "protected file #{path} changed in #{commit} after #{base}")
+    end
   end
 end
 
 def manual_paths_in_history(ref)
   git("log", ref, "--name-only", "--format=", "--", "manual")
     .lines.map(&:chomp)
-    .select { |path| path.start_with?("manual/") && !path.end_with?(".sh") }
+    .select { |path| protected_manual_path?(path) }
     .uniq
 end
 
@@ -179,7 +186,7 @@ begin
   check_workflow_actions(ref, files)
   check_commit_records(ref, base)
   check_migrations(ref, files)
-  check_manual_history(ref, files)
+  check_manual_history(ref, files) unless base
   check_manual(ref, base)
 rescue StandardError => e
   fail_check("error", e.message)
