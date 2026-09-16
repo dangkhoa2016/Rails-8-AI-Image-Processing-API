@@ -298,6 +298,71 @@ verify_stress_contract() {
 
 expect_success "deterministic stress protocol requires bounded parallel runs" verify_stress_contract
 
+verify_authoritative_stress_admission() {
+  local focused="$1" full="$2" workers="$3" expected="$4"
+  local fixture fake_bin invocation_log output rc invocation_count
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  fake_bin="${fixture}/fake-bin"
+  invocation_log="${fixture}/invocations.log"
+
+  copy_repository_fixture "${fixture}"
+  mkdir -p "${fake_bin}"
+  : > "${invocation_log}"
+  cat > "${fake_bin}/ruby" <<'SH'
+#!/usr/bin/env bash
+printf 'ruby %s\n' "$*" >> "${STRESS_INVOCATION_LOG}"
+exit 97
+SH
+  cat > "${fake_bin}/bundle" <<'SH'
+#!/usr/bin/env bash
+printf 'bundle %s\n' "$*" >> "${STRESS_INVOCATION_LOG}"
+exit 97
+SH
+  chmod +x "${fake_bin}/ruby" "${fake_bin}/bundle"
+
+  set +e
+  output="$(cd "${fixture}/repository" && PATH="${fake_bin}:${PATH}" STRESS_INVOCATION_LOG="${invocation_log}" STRESS_VALIDATE_ONLY=1 FOCUSED_REPETITIONS="${focused}" FULL_SUITE_REPETITIONS="${full}" PARALLEL_WORKERS="${workers}" bash scripts/release/stress_deterministic_gate.sh 2>&1)"
+  rc=$?
+  set -e
+  invocation_count="$(wc -l < "${invocation_log}" 2>/dev/null || true)"
+
+  rm -rf "${fixture}"
+  trap - RETURN
+
+  if [[ "${expected}" == reject ]]; then
+    [[ "${rc}" -ne 0 ]] &&
+      [[ "${invocation_count}" -eq 0 ]] &&
+      ! grep -Fq 'PASS deterministic stress' <<<"${output}"
+  else
+    [[ "${rc}" -eq 0 ]] &&
+      [[ "${invocation_count}" -eq 0 ]]
+  fi
+}
+
+expect_success "authoritative stress rejects zero focused repetitions" \
+  verify_authoritative_stress_admission 0 10 4 reject
+expect_success "authoritative stress rejects zero full-suite repetitions" \
+  verify_authoritative_stress_admission 50 0 4 reject
+expect_success "authoritative stress rejects negative focused repetitions" \
+  verify_authoritative_stress_admission -1 10 4 reject
+expect_success "authoritative stress rejects negative full-suite repetitions" \
+  verify_authoritative_stress_admission 50 -1 4 reject
+expect_success "authoritative stress rejects nonnumeric focused repetitions" \
+  verify_authoritative_stress_admission abc 10 4 reject
+expect_success "authoritative stress rejects nonnumeric full-suite repetitions" \
+  verify_authoritative_stress_admission 50 abc 4 reject
+expect_success "authoritative stress rejects noncanonical focused repetitions" \
+  verify_authoritative_stress_admission 49 10 4 reject
+expect_success "authoritative stress rejects noncanonical full-suite repetitions" \
+  verify_authoritative_stress_admission 50 9 4 reject
+expect_success "authoritative stress rejects fewer than four workers" \
+  verify_authoritative_stress_admission 50 10 1 reject
+expect_success "authoritative stress rejects noncanonical worker counts" \
+  verify_authoritative_stress_admission 50 10 3 reject
+expect_success "authoritative stress admits canonical counts without workloads" \
+  verify_authoritative_stress_admission 50 10 4 accept
+
 verify_stress_executes_each_requested_iteration() {
   local fixture fake_bin invocation_log output rc ruby_invocations bundle_invocations prepare_invocations cleanup_removed
   fixture="$(mktemp -d)"
