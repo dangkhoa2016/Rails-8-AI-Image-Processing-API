@@ -14,7 +14,7 @@ class ConvertU2netpToOnnxTest < ActiveSupport::TestCase
       output = File.join(directory, "u2netp.onnx")
 
       _stdout, stderr, status = Open3.capture3(
-        "python", SCRIPT,
+        "python3", SCRIPT,
         "--source-directory", missing_source,
         "--weights", weights,
         "--output", output

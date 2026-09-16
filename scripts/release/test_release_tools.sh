@@ -22,12 +22,25 @@ expect_failure() {
   if "$@"; then bad "$label"; else ok "$label"; fi
 }
 
+copy_repository_fixture() {
+  local fixture_root="$1"
+  local repository="${fixture_root}/repository"
+
+  cp -R "${SCRIPT_DIR}/../.." "${repository}"
+  rm -rf "${repository}/.git"
+  git -C "${repository}" init --quiet
+  git -C "${repository}" config user.email test@example.com
+  git -C "${repository}" config user.name 'Release helper test'
+  git -C "${repository}" add deploy
+  git -C "${repository}" commit --quiet -m 'test: prepare release fixture' -m '- Track deploy files for release verifier fixtures.'
+}
+
 verify_rejects_unavailable_git_metadata() {
   local fixture output rc
   fixture="$(mktemp -d)"
   trap 'rm -rf "${fixture}"' RETURN
 
-  cp -a "${SCRIPT_DIR}/../.." "${fixture}/repository"
+  copy_repository_fixture "${fixture}"
   printf '#!/usr/bin/env bash\nexit 0\n' > "${fixture}/repository/deploy/beam/test_deploy.sh"
   chmod +x "${fixture}/repository/deploy/beam/test_deploy.sh"
 
@@ -49,7 +62,7 @@ verify_rejects_tracked_deploy_file_enumeration_failure() {
   fake_bin="${fixture}/fake-bin"
   real_git="$(command -v git)"
 
-  cp -a "${SCRIPT_DIR}/../.." "${fixture}/repository"
+  copy_repository_fixture "${fixture}"
   printf '#!/usr/bin/env bash\nexit 0\n' > "${fixture}/repository/deploy/beam/test_deploy.sh"
   chmod +x "${fixture}/repository/deploy/beam/test_deploy.sh"
   mkdir -p "${fake_bin}"
@@ -74,6 +87,38 @@ SH
 
   [[ "${rc}" -ne 0 ]] &&
     grep -Fxq 'FAIL unable to enumerate tracked deploy files' <<<"${output}" &&
+    ! grep -Fxq 'PASS repository release contract' <<<"${output}"
+}
+
+verify_rejects_python_alias_without_python3() {
+  local fixture fake_bin real_python3 bash_bin executable output rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  fake_bin="${fixture}/fake-bin"
+  real_python3="$(command -v python3)"
+  bash_bin="$(command -v bash)"
+
+  copy_repository_fixture "${fixture}"
+  mkdir -p "${fake_bin}"
+  for executable in git grep ruby dirname bash; do
+    ln -s "$(command -v "${executable}")" "${fake_bin}/${executable}"
+  done
+  cat > "${fake_bin}/python" <<SH
+#!/usr/bin/env bash
+exec "${real_python3}" "\$@"
+SH
+  chmod +x "${fake_bin}/python"
+
+  set +e
+  output="$(PATH="${fake_bin}" "${bash_bin}" "${fixture}/repository/scripts/release/verify_repository.sh" 2>&1)"
+  rc=$?
+  set -e
+
+  rm -rf "${fixture}"
+  trap - RETURN
+
+  [[ "${rc}" -ne 0 ]] &&
+    grep -Fxq 'FAIL python3 is required for repository release verification' <<<"${output}" &&
     ! grep -Fxq 'PASS repository release contract' <<<"${output}"
 }
 
@@ -177,6 +222,15 @@ expect_success "repository verifier rejects unavailable Git metadata without a P
 
 expect_success "repository verifier rejects tracked deploy-file enumeration failure without a PASS marker" \
   verify_rejects_tracked_deploy_file_enumeration_failure
+
+expect_success "repository verifier requires python3 instead of a python alias" \
+  verify_rejects_python_alias_without_python3
+
+if grep -Fq 'python3' "${CI_FILE}"; then
+  ok "CI declares python3 for host validation"
+else
+  bad "CI declares python3 for host validation"
+fi
 
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
