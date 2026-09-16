@@ -21,6 +21,11 @@ module ImageLab
       new(upload, max_upload_bytes:, max_input_pixels:, max_dimension:, temporary_directory:).with_image(&block)
     end
 
+    def self.default_temporary_directory
+      base = Rails.root.join("tmp/image_lab")
+      Rails.env.test? ? base.join("process-#{Process.pid}") : base
+    end
+
     def self.env_limit(name, default)
       value = Integer(ENV.fetch(name, default.to_s), 10)
       raise ArgumentError, "#{name} must be positive" unless value.positive?
@@ -33,7 +38,7 @@ module ImageLab
       @max_upload_bytes = max_upload_bytes
       @max_input_pixels = max_input_pixels
       @max_dimension = max_dimension
-      @temporary_directory = temporary_directory || Rails.root.join("tmp/image_lab")
+      @temporary_directory = temporary_directory || self.class.default_temporary_directory
     end
 
     def call
