@@ -299,7 +299,7 @@ verify_stress_contract() {
 expect_success "deterministic stress protocol requires bounded parallel runs" verify_stress_contract
 
 verify_stress_executes_each_requested_iteration() {
-  local fixture fake_bin invocation_log output rc ruby_invocations bundle_invocations prepare_invocations
+  local fixture fake_bin invocation_log output rc ruby_invocations bundle_invocations prepare_invocations cleanup_removed
   fixture="$(mktemp -d)"
   trap 'rm -rf "${fixture}"' RETURN
   fake_bin="${fixture}/fake-bin"
@@ -310,6 +310,8 @@ verify_stress_executes_each_requested_iteration() {
   cat > "${fake_bin}/ruby" <<'SH'
 #!/usr/bin/env bash
 printf 'ruby %s\n' "$*" >> "${STRESS_INVOCATION_LOG}"
+mkdir -p script/models/__pycache__
+touch script/models/__pycache__/stress-test.pyc
 SH
   cat > "${fake_bin}/bundle" <<'SH'
 #!/usr/bin/env bash
@@ -324,6 +326,7 @@ SH
   ruby_invocations="$(grep -c '^ruby script/benchmark_vips_cpu_8gb.rb --quick --workers 2$' "${invocation_log}" 2>/dev/null || true)"
   bundle_invocations="$(grep -c '^bundle exec rails test$' "${invocation_log}" 2>/dev/null || true)"
   prepare_invocations="$(grep -c '^bundle exec rails db:prepare$' "${invocation_log}" 2>/dev/null || true)"
+  [[ ! -e "${fixture}/repository/script/models/__pycache__" ]] && cleanup_removed=yes || cleanup_removed=no
 
   rm -rf "${fixture}"
   trap - RETURN
@@ -332,6 +335,7 @@ SH
     [[ "${ruby_invocations}" -eq 2 ]] &&
     [[ "${bundle_invocations}" -eq 2 ]] &&
     [[ "${prepare_invocations}" -eq 1 ]] &&
+    [[ "${cleanup_removed}" == yes ]] &&
     grep -Fxq 'PASS deterministic stress focused=2 full=2 workers=2' <<<"${output}"
 }
 

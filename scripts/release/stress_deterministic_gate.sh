@@ -26,4 +26,6 @@ for ((index = 1; index <= FULL_SUITE_REPETITIONS; index++)); do
   [[ -z "${residue}" ]] || { echo 'FAIL scratch residue files remain' >&2; printf '%s\n' "${residue}" >&2; exit 1; }
 done
 
+rm -rf script/models/__pycache__
+
 echo "PASS deterministic stress focused=${FOCUSED_REPETITIONS} full=${FULL_SUITE_REPETITIONS} workers=${PARALLEL_WORKERS}"
