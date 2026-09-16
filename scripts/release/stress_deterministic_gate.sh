@@ -11,13 +11,13 @@ PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}"
 }
 
 for ((index = 1; index <= FOCUSED_REPETITIONS; index++)); do
-  seed=$((10_000 + index))
+  seed=$((10000 + index))
   echo "FOCUSED_$(printf '%02d' "${index}") seed=${seed}"
   SEED="${seed}" ruby script/benchmark_vips_cpu_8gb.rb --quick --workers "${PARALLEL_WORKERS}"
 done
 
 for ((index = 1; index <= FULL_SUITE_REPETITIONS; index++)); do
-  seed=$((31_000 + index))
+  seed=$((31000 + index))
   echo "FULL_$(printf '%02d' "${index}") seed=${seed} workers=${PARALLEL_WORKERS}"
   PARALLEL_WORKERS="${PARALLEL_WORKERS}" SEED="${seed}" bundle exec rails test
   residue="$(find tmp/image_lab -type f -print)"

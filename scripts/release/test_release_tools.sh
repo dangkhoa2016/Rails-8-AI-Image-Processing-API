@@ -298,5 +298,42 @@ verify_stress_contract() {
 
 expect_success "deterministic stress protocol requires bounded parallel runs" verify_stress_contract
 
+verify_stress_executes_each_requested_iteration() {
+  local fixture fake_bin invocation_log output rc ruby_invocations bundle_invocations
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  fake_bin="${fixture}/fake-bin"
+  invocation_log="${fixture}/invocations.log"
+
+  copy_repository_fixture "${fixture}"
+  mkdir -p "${fixture}/repository/tmp/image_lab" "${fake_bin}"
+  cat > "${fake_bin}/ruby" <<'SH'
+#!/usr/bin/env bash
+printf 'ruby %s\n' "$*" >> "${STRESS_INVOCATION_LOG}"
+SH
+  cat > "${fake_bin}/bundle" <<'SH'
+#!/usr/bin/env bash
+printf 'bundle %s\n' "$*" >> "${STRESS_INVOCATION_LOG}"
+SH
+  chmod +x "${fake_bin}/ruby" "${fake_bin}/bundle"
+
+  set +e
+  output="$(cd "${fixture}/repository" && PATH="${fake_bin}:${PATH}" STRESS_INVOCATION_LOG="${invocation_log}" FOCUSED_REPETITIONS=2 FULL_SUITE_REPETITIONS=2 PARALLEL_WORKERS=2 bash scripts/release/stress_deterministic_gate.sh 2>&1)"
+  rc=$?
+  set -e
+  ruby_invocations="$(grep -c '^ruby script/benchmark_vips_cpu_8gb.rb --quick --workers 2$' "${invocation_log}" 2>/dev/null || true)"
+  bundle_invocations="$(grep -c '^bundle exec rails test$' "${invocation_log}" 2>/dev/null || true)"
+
+  rm -rf "${fixture}"
+  trap - RETURN
+
+  [[ "${rc}" -eq 0 ]] &&
+    [[ "${ruby_invocations}" -eq 2 ]] &&
+    [[ "${bundle_invocations}" -eq 2 ]] &&
+    grep -Fxq 'PASS deterministic stress focused=2 full=2 workers=2' <<<"${output}"
+}
+
+expect_success "deterministic stress executes every requested iteration" verify_stress_executes_each_requested_iteration
+
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
