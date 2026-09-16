@@ -9,5 +9,7 @@ module ImageLab
     class InvalidOperation < StandardError; end
     class UnsupportedOperation < StandardError; end
     class OperationLimitExceeded < StandardError; end
+    class OutputLimitExceeded < StandardError; end
+    class AiUnavailable < StandardError; end
   end
 end

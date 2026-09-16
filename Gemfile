@@ -12,6 +12,7 @@ gem "json", "< 3.0"
 # Use PostgreSQL as the database for Active Record
 gem "pg", "~> 1.6"
 gem "ruby-vips", "~> 2.3"
+gem "onnxruntime", "~> 0.11.6"
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
@@ -74,7 +75,7 @@ end
 # Parse our own Gemfile to find the Rails constraint instead of using
 # Gem::Specification.find_by_name which behaves differently at
 # `bundle install` vs `bundle exec` time.
-rails_version_line = File.read(__FILE__).match(/^gem "rails", "([^"]+)"/)
+rails_version_line = File.read(__FILE__, encoding: Encoding::UTF_8).match(/^gem "rails", "([^"]+)"/)
 rails_version = if rails_version_line
                 # Extract major.minor from constraint like "~> 8.1.3" or ">= 8.0"
                 major_minor = rails_version_line[1].match(/(\d+\.\d+)/)

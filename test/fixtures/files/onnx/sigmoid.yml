@@ -1,0 +1,14 @@
+name: onnx_smoke
+source_url: https://raw.githubusercontent.com/onnx/onnx/v1.22.0/onnx/backend/test/data/node/test_sigmoid/model.onnx
+source_revision: v1.22.0
+license: Apache-2.0
+sha256: c9ea45be3dd00fd43865a739458c74c1f7c7fd325faf8294009f43ae9c0628dd
+file_size: 105
+input:
+  name: x
+  type: tensor(float)
+  shape: [3, 4, 5]
+output:
+  name: y
+  type: tensor(float)
+  shape: [3, 4, 5]
