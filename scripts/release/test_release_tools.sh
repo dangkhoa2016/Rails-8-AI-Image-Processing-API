@@ -286,5 +286,17 @@ PY
 
 expect_success "archive hygiene rejects forbidden source paths" verify_archive_hygiene_contract
 
+verify_stress_contract() {
+  local stress="${SCRIPT_DIR}/stress_deterministic_gate.sh"
+  [[ -x "${stress}" ]] &&
+    grep -Fq 'FOCUSED_REPETITIONS="${FOCUSED_REPETITIONS:-50}"' "${stress}" &&
+    grep -Fq 'FULL_SUITE_REPETITIONS="${FULL_SUITE_REPETITIONS:-10}"' "${stress}" &&
+    grep -Fq 'PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}"' "${stress}" &&
+    grep -Fq 'PARALLEL_WORKERS must be at least 2' "${stress}" &&
+    grep -Fq 'find tmp/image_lab -type f -print' "${stress}"
+}
+
+expect_success "deterministic stress protocol requires bounded parallel runs" verify_stress_contract
+
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
