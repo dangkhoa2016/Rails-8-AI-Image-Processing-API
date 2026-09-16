@@ -61,6 +61,28 @@ class ImageLab::InputTest < ActiveSupport::TestCase
     end
   end
 
+  test "uses a process-specific default scratch directory in test" do
+    assert_equal Rails.root.join("tmp/image_lab/process-#{Process.pid}"),
+                 ImageLab::Input.default_temporary_directory
+  end
+
+  test "derives different test scratch directories for different process identities" do
+    first = Process.stub(:pid, 10_001) { ImageLab::Input.default_temporary_directory }
+    second = Process.stub(:pid, 10_002) { ImageLab::Input.default_temporary_directory }
+
+    assert_equal Rails.root.join("tmp/image_lab/process-10001"), first
+    assert_equal Rails.root.join("tmp/image_lab/process-10002"), second
+    assert_not_equal first, second
+  end
+
+  test "keeps the established scratch root outside test" do
+    production = ActiveSupport::StringInquirer.new("production")
+
+    Rails.stub(:env, production) do
+      assert_equal Rails.root.join("tmp/image_lab"), ImageLab::Input.default_temporary_directory
+    end
+  end
+
   test "honors EXIF orientation before returning the image" do
     source = Vips::Image.new_from_buffer(exif_orientation_with_gps_jpeg, "")
     image = ImageLab::Input.call(StringIO.new(exif_orientation_with_gps_jpeg)).image
