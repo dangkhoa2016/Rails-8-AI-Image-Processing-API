@@ -1,10 +1,11 @@
-# Image processing HTTP contract (Phase 4)
+# Image processing HTTP contract (v1)
 
 ## Purpose and scope
 
-This document defines the first authenticated HTTP boundary for image processing.
-It deliberately establishes the request and response contract before Phase 5 adds
-central input validation and before later phases add transformation operations.
+This document defines the authenticated HTTP boundary for deterministic image
+processing. Phase 4 established the boundary; Phases 5 through 10 added
+qualified input handling, transforms, metadata/orientation policy, and a
+stateless temporary-file lifecycle.
 
 The contract is version `v1`. It does not add API keys, public access, upload
 persistence, background jobs, or AI functionality.
@@ -23,15 +24,25 @@ Returns the capabilities that are actually available at the time of the request:
 ```json
 {
   "version": "v1",
-  "operations": [],
+  "operations": [
+    "resize_to_fit", "resize_to_fill", "crop", "rotate", "flip", "grayscale",
+    "brightness", "contrast", "saturation", "tint", "blur", "sharpen", "background"
+  ],
   "request_content_type": "multipart/form-data",
-  "response_content_type": "image/png"
+  "response_content_type": "image/png",
+  "response_content_types": [
+    "image/png",
+    "image/jpeg",
+    "image/webp"
+  ]
 }
 ```
 
-`operations` is intentionally empty in Phase 4. The endpoint must not advertise
-`resize_to_fit`, `rotate`, or another operation until that operation is implemented
-and qualified.
+The endpoint derives the operation list from the explicit registry and must not
+advertise another operation. `response_content_type` is the default output
+format; `response_content_types` is the exact set of output MIME types the
+encoder supports (`png`, `jpeg`, `webp`). Neither list may include a format the
+encoder does not implement.
 
 ### `POST /images/process`
 
@@ -40,19 +51,46 @@ The request uses `multipart/form-data` and reserves these fields:
 | Field | Phase 4 behavior |
 | --- | --- |
 | `image` | Required uploaded image. |
-| `operations` | Required JSON array. Only `[]` is accepted in Phase 4. |
-| `format` | Reserved for a future output choice; current output is always PNG. |
-| `quality` | Reserved for a future output-quality choice; it has no Phase 4 output effect. |
+| `operations` | Required JSON array of flat operation objects, applied in order. |
+| `format` | Optional exact lower-case `png` (default), `jpeg`, or `webp`. |
+| `quality` | Optional integer `1..100` for JPEG/WebP; defaults to 85 and is invalid for PNG. |
 
-A valid Phase 4 request supplies an uploaded image and `operations: []`. The
-endpoint decodes the image in memory with Vips and returns PNG bytes. This is a
-contract smoke path, not an input-validation or transformation pipeline.
+A valid request supplies a qualified uploaded image and operations that the
+registry supports. The endpoint copies the bounded upload to an app-owned,
+short-lived tempfile for Vips decoding, then transforms and encodes the
+selected output format in memory. The tempfile is removed before the request
+finishes. EXIF orientation is honored during
+decode. Each response is encoded with metadata stripped; this includes GPS,
+camera/device information, serials, thumbnails, author/comment fields, ICC,
+and orientation data. The API does not expose `preserve_metadata`.
+
+### Color and filter operations
+
+The following Phase 8 operation objects are accepted in the ordered
+`operations` array. Each object must contain exactly the listed fields; JSON
+number values must be finite numbers, not strings or booleans.
+
+| Operation | Fields | Bounds |
+| --- | --- | --- |
+| `brightness`, `contrast`, `saturation` | `amount` | `-1.0..1.0`; zero is unchanged |
+| `tint` | `color`, `strength` | strict `#RRGGBB`; `strength` `0.0..1.0` |
+| `blur` | `sigma` | `0.1..20.0` |
+| `sharpen` | `amount` | `0.0..1.0`; zero is unchanged |
+| `background` | `color` | strict `#RRGGBB`; input must have alpha |
+
+Brightness, contrast, saturation and tint preserve an existing alpha channel.
+For a non-zero color adjustment, color data is converted to sRGB before the
+mapping is applied; `amount: 0` for brightness, contrast, or saturation returns
+the input representation unchanged. `background` is intentional alpha
+composition: it flattens the image onto the opaque RGB color and always returns
+three-band sRGB output. The implementation exposes no raw Vips method,
+coefficient, color-name, shorthand hex, or CSS-color parameter.
 
 Successful responses have:
 
 ```text
 HTTP 200
-Content-Type: image/png
+Content-Type: image/png, image/jpeg, or image/webp
 Cache-Control: no-store
 ```
 
@@ -75,10 +113,36 @@ Contract errors return a single JSON error field:
 }
 ```
 
-Missing `image`, a missing or malformed `operations` value, and a non-empty
-operations array return `422 Unprocessable Entity`. Detailed file limits, format
-allowlists, pixel limits, and decoder-safety rules are intentionally deferred to
-`ImageLab::Input` in Phase 5.
+Missing `image`, a missing or malformed `operations` value, an unsupported
+operation, invalid operation parameter, invalid output setting, or qualified
+input that violates byte/format/decode/dimension/pixel guards returns `422
+Unprocessable Entity`.
+
+## Rate limiting
+
+`POST /images/process` is limited to 30 requests per 60 seconds per request IP
+address. The key uses the application's existing Rack::Attack proxy/IP
+handling; the API does not rely on a client-supplied forwarding header or
+parse JWTs in middleware. When the limit is exceeded, the established error
+contract applies:
+
+```text
+HTTP 429
+Content-Type: application/json
+Retry-After: 60
+```
+
+The response body is:
+
+```json
+{
+  "error": "Too many requests. Please try again later."
+}
+```
+
+The rate limit is intentionally an initial policy and will be tuned after the
+Phase 12 deterministic-processing benchmark. `GET /images/capabilities` is
+not rate-limited by this image-processing workload policy.
 
 ## Test contract
 
@@ -86,14 +150,17 @@ allowlists, pixel limits, and decoder-safety rules are intentionally deferred to
 in-memory PNG bytes and no mocks:
 
 1. unauthenticated capability and process requests return `401`;
-2. authenticated process request without `image` returns `422` and `error`;
-3. malformed `operations` returns `422` and `error`;
-4. a tiny PNG with `operations: []` returns PNG bytes, `Cache-Control: no-store`,
-   and the declared metadata headers;
-5. capabilities returns version `v1` and an empty operations list.
+2. authenticated invalid input and malformed/unsupported operations return `422`;
+3. a tiny PNG processed with a registered color operation returns transformed
+   PNG bytes, `Cache-Control: no-store`, and the declared metadata headers;
+4. capabilities returns exactly the explicit registry set and the exact
+   supported output MIME list (`image/png`, `image/jpeg`, `image/webp`);
+5. a real EXIF-orientation JPEG with GPS data is rotated correctly and returns
+   without EXIF, GPS, or orientation metadata.
 
 ## Explicit non-goals
 
-This phase does not validate upload sizes or content policy, implement named image
-operations, persist uploads/results, enqueue work, expose public capabilities, or
-add AI inference. Those responsibilities belong to later phases.
+This API does not persist uploads/results, enqueue work, expose public
+capabilities, accept remote image URLs, expose arbitrary Vips invocation,
+persist uploads or results, or add AI inference. Those responsibilities belong
+to later phases.
