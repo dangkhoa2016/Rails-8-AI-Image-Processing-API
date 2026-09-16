@@ -13,10 +13,11 @@ module ImageLab
 
       PASSWORD = "Password1!"
 
-      def call(fixture:, scratch_directory: ImageLab::Input.default_temporary_directory)
+      def call(fixture:)
         session = ActionDispatch::Integration::Session.new(Rails.application)
         user = create_confirmed_benchmark_user
         token = sign_in_and_extract_bearer_token(session, user)
+        scratch_directory = ImageLab::Input.default_temporary_directory
         before = scratch_entries(scratch_directory)
         client_upload = client_upload_for(fixture)
 

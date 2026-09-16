@@ -25,7 +25,7 @@ class ImageLabBenchmarkHttpScenarioTest < ActiveSupport::TestCase
     before = scratch_entries(scratch_directory)
 
     with_corpus_fixture do |fixture|
-      record = ImageLab::Benchmark::HttpScenario.call(fixture:, scratch_directory:)
+      record = ImageLab::Benchmark::HttpScenario.call(fixture:)
 
       assert_equal 200, record.fetch("status")
       assert_operator record.fetch("output_bytes"), :>, 0
