@@ -253,6 +253,183 @@ verify_canonical_runner_contract() {
 expect_success "canonical runner pins images and uses the committed lockfile" \
   verify_canonical_runner_contract
 
+REQUIRED_RUNNER_PACKAGES=(build-essential curl git jq libpq-dev pkg-config python3 unzip libvips)
+
+gate_image_reference() {
+  local compose_file="$1"
+  awk '/^[[:space:]]+gate:/{in_gate=1} in_gate && /^[[:space:]]+image:/{print; exit}' "${compose_file}"
+}
+
+assert_runner_immutable_authority() {
+  local dockerfile="$1"
+  local compose_file="$2"
+  local gate_ref
+  local pkg
+  local pinned=0
+  local missing=0
+
+  gate_ref="$(gate_image_reference "${compose_file}")"
+  if [[ -n "${gate_ref}" ]]; then
+    # The authoritative gate must consume a prebuilt runner image by exact
+    # immutable digest; a mutable tag or untagged reference is floating.
+    grep -Eq '@sha256:[0-9a-f]{64}' <<<"${gate_ref}" || return 1
+    return 0
+  fi
+
+  # Otherwise the gate builds the runner, so the build must be immutable:
+  # a fixed Debian snapshot source with every required package version-pinned.
+  grep -Eq 'snapshot\.debian\.org/archive/[a-z]+/[0-9]{8}T[0-9]{6}Z/' "${dockerfile}" || return 1
+  grep -Eq 'deb\.debian\.org' "${dockerfile}" && return 1
+  grep -Eq 'apt-get update' "${dockerfile}" || return 1
+
+  for pkg in "${REQUIRED_RUNNER_PACKAGES[@]}"; do
+    if [[ "${pkg}" == libvips ]]; then
+      grep -Eq '^[[:space:]]*libvips[0-9]+[a-z0-9.\-]*=[0-9][^[:space:]]*' "${dockerfile}" || missing=1
+    else
+      grep -Eq "^[[:space:]]*${pkg}=[0-9][^[:space:]]*" "${dockerfile}" || missing=1
+    fi
+  done
+  [[ "${missing}" -eq 0 ]] || return 1
+
+  # No required package may be installed without an exact version pin.
+  for pkg in "${REQUIRED_RUNNER_PACKAGES[@]}"; do
+    if grep -Eq "([[:space:]]|^)${pkg}([[:space:]#\\]|$)" "${dockerfile}"; then
+      pinned=1
+    fi
+  done
+  [[ "${pinned}" -eq 0 ]]
+}
+
+verify_runner_system_packages_immutable() {
+  local dockerfile="${SCRIPT_DIR}/../../docker/release-gate/Dockerfile"
+  local compose_file="${SCRIPT_DIR}/../../docker/release-gate/compose.yml"
+  assert_runner_immutable_authority "${dockerfile}" "${compose_file}"
+}
+
+verify_floating_apt_runner_rejected() {
+  local fixture dockerfile compose_file rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  dockerfile="${fixture}/Dockerfile"
+  compose_file="${fixture}/compose.yml"
+
+  cat > "${dockerfile}" <<'F'
+FROM ruby:3.3.12-slim@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      curl \
+      git
+F
+  cat > "${compose_file}" <<'F'
+services:
+  gate:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+F
+
+  set +e
+  assert_runner_immutable_authority "${dockerfile}" "${compose_file}"
+  rc=$?
+  set -e
+  rm -rf "${fixture}"
+  trap - RETURN
+  [[ "${rc}" -ne 0 ]]
+}
+
+verify_unversioned_required_package_rejected() {
+  local fixture dockerfile compose_file rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  dockerfile="${fixture}/Dockerfile"
+  compose_file="${fixture}/compose.yml"
+
+  cat > "${dockerfile}" <<'F'
+FROM ruby:3.3.12-slim@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+RUN printf 'deb [check-valid-until=no] https://snapshot.debian.org/archive/debian/20260915T000000Z/ trixie main\n' > /etc/apt/sources.list.d/snapshot.list && \
+    rm -f /etc/apt/sources.list /etc/apt/sources.list.d/debian.sources && \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      curl=8.14.1-2+deb13u5
+F
+  cat > "${compose_file}" <<'F'
+services:
+  gate:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+F
+
+  set +e
+  assert_runner_immutable_authority "${dockerfile}" "${compose_file}"
+  rc=$?
+  set -e
+  rm -rf "${fixture}"
+  trap - RETURN
+  [[ "${rc}" -ne 0 ]]
+}
+
+verify_unpinned_runner_image_rejected() {
+  local fixture compose_file rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  compose_file="${fixture}/compose.yml"
+
+  cat > "${compose_file}" <<'F'
+services:
+  gate:
+    image: ghcr.io/example/release-runner:latest
+    command: ["bash"]
+F
+
+  set +e
+  assert_runner_immutable_authority /dev/null "${compose_file}"
+  rc=$?
+  set -e
+  rm -rf "${fixture}"
+  trap - RETURN
+  [[ "${rc}" -ne 0 ]]
+}
+
+verify_digest_pinned_runner_image_accepted() {
+  local fixture compose_file rc
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  compose_file="${fixture}/compose.yml"
+
+  cat > "${compose_file}" <<'F'
+services:
+  gate:
+    image: ghcr.io/example/release-runner@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    command: ["bash"]
+F
+
+  set +e
+  assert_runner_immutable_authority /dev/null "${compose_file}"
+  rc=$?
+  set -e
+  rm -rf "${fixture}"
+  trap - RETURN
+  [[ "${rc}" -eq 0 ]]
+}
+
+expect_success "canonical runner resolves system packages from an immutable authority" \
+  verify_runner_system_packages_immutable
+
+expect_success "floating apt repository runner definition is rejected" \
+  verify_floating_apt_runner_rejected
+
+expect_success "unversioned required package install is rejected" \
+  verify_unversioned_required_package_rejected
+
+expect_success "non-digest runner image reference is rejected" \
+  verify_unpinned_runner_image_rejected
+
+expect_success "digest-pinned runner image reference is accepted" \
+  verify_digest_pinned_runner_image_accepted
+
 verify_deterministic_gate_contract() {
   local gate="${SCRIPT_DIR}/verify_deterministic_gate.sh"
   [[ -x "${gate}" ]] &&
