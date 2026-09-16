@@ -10,6 +10,8 @@ PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}"
   exit 2
 }
 
+RAILS_ENV=test bundle exec rails db:prepare
+
 for ((index = 1; index <= FOCUSED_REPETITIONS; index++)); do
   seed=$((10000 + index))
   echo "FOCUSED_$(printf '%02d' "${index}") seed=${seed}"
