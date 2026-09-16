@@ -72,13 +72,12 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     assert status.success?, [ output, error ].join("\n")
   end
 
-  test "rejects a tracked lockfile" do
+  test "accepts the committed application lockfile" do
     commit(subject: "chore: add lockfile", body: "- Track dependencies\n", files: { "Gemfile.lock" => "GEM\n" })
 
-    out, _err, status = run_checker("HEAD")
+    _out, _err, status = run_checker("HEAD")
 
-    assert_not status.success?
-    assert_match(/Gemfile\.lock/, out)
+    assert status.success?
   end
 
   test "rejects a non-conventional subject" do
