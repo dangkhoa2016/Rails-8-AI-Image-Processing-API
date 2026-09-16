@@ -10,7 +10,8 @@ RUN apt-get update -qq && \
       libpq-dev \
       libvips \
       pkg-config \
-      python3 && \
+      python3 \
+      unzip && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 ENV BUNDLE_FROZEN=true
