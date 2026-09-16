@@ -232,5 +232,25 @@ else
   bad "CI declares python3 for host validation"
 fi
 
+verify_canonical_runner_contract() {
+  local dockerfile="${SCRIPT_DIR}/../../docker/release-gate/Dockerfile"
+  local compose_file="${SCRIPT_DIR}/../../docker/release-gate/compose.yml"
+  local dockerignore="${SCRIPT_DIR}/../../.dockerignore"
+  local gitignore="${SCRIPT_DIR}/../../.gitignore"
+
+  [[ -s "${dockerfile}" ]] &&
+    [[ -s "${compose_file}" ]] &&
+    grep -Eq '^FROM ruby:3\.3\.12-slim@sha256:[0-9a-f]{64}$' "${dockerfile}" &&
+    grep -Fxq 'COPY Gemfile Gemfile.lock ./' "${dockerfile}" &&
+    grep -Fxq 'ENV BUNDLE_FROZEN=true' "${dockerfile}" &&
+    grep -Fq 'python3' "${dockerfile}" &&
+    grep -Eq 'image: postgres:17\.11@sha256:[0-9a-f]{64}' "${compose_file}" &&
+    ! grep -Fxq '/Gemfile.lock' "${dockerignore}" &&
+    ! grep -Fxq 'Gemfile.lock' "${gitignore}"
+}
+
+expect_success "canonical runner pins images and uses the committed lockfile" \
+  verify_canonical_runner_contract
+
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
