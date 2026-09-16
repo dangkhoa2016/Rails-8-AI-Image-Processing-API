@@ -36,6 +36,26 @@ class ImageLabBenchmarkHttpScenarioTest < ActiveSupport::TestCase
     end
   end
 
+  test "rejects caller-supplied scratch_directory override so observer uses the same authority as real request" do
+    unrelated_directory = Dir.mktmpdir("unrelated-observer")
+
+    with_corpus_fixture do |fixture|
+      assert_raises(ArgumentError) do
+        ImageLab::Benchmark::HttpScenario.call(fixture:, scratch_directory: unrelated_directory)
+      end
+    end
+  ensure
+    FileUtils.remove_entry(unrelated_directory) if unrelated_directory && Dir.exist?(unrelated_directory)
+  end
+
+  test "observation-only override no longer accepted in call signature" do
+    method = ImageLab::Benchmark::HttpScenario.method(:call)
+    parameter_names = method.parameters.select { |_, name| name == :scratch_directory }.map(&:last)
+
+    assert_empty parameter_names,
+                 "scratch_directory parameter must be removed from HttpScenario.call"
+  end
+
   private
 
   def with_corpus_fixture
