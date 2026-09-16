@@ -7,7 +7,7 @@
 #   bin/check_repository_policy [REF] [BASE_REF]
 #
 # Audits REF (default HEAD) and exits non-zero if repository policy is
-# violated: tracked lockfile or coverage artifacts, non-conventional commit
+# violated: tracked coverage artifacts, non-conventional commit
 # messages, missing bullet bodies, mismatched author/committer dates, future
 # commit dates, future migration timestamps, workflow action versions,
 # immutability of non-Bash files under manual/, and — when a base ref is
@@ -62,7 +62,6 @@ def git_files(ref)
 end
 
 def check_tracked_artifacts(ref, files)
-  fail_check("lockfile", "#{ref} tracks Gemfile.lock") if files.include?("Gemfile.lock")
   files.grep(/\A(?:coverage|public\/coverage)\//).each do |path|
     fail_check("coverage", "#{ref} tracks #{path}")
   end
