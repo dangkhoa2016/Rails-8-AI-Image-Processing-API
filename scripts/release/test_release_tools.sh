@@ -289,14 +289,14 @@ expect_success "archive hygiene rejects forbidden source paths" verify_archive_h
 verify_stress_contract() {
   local stress="${SCRIPT_DIR}/stress_deterministic_gate.sh"
   [[ -x "${stress}" ]] &&
-    grep -Fq 'FOCUSED_REPETITIONS="${FOCUSED_REPETITIONS:-50}"' "${stress}" &&
-    grep -Fq 'FULL_SUITE_REPETITIONS="${FULL_SUITE_REPETITIONS:-10}"' "${stress}" &&
-    grep -Fq 'PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}"' "${stress}" &&
-    grep -Fq 'PARALLEL_WORKERS must be at least 2' "${stress}" &&
+    grep -Fq 'AUTHORITATIVE_FOCUSED_REPETITIONS=50' "${stress}" &&
+    grep -Fq 'AUTHORITATIVE_FULL_SUITE_REPETITIONS=10' "${stress}" &&
+    grep -Fq 'AUTHORITATIVE_PARALLEL_WORKERS=4' "${stress}" &&
+    grep -Fq 'assert_canonical_count' "${stress}" &&
     grep -Fq 'find tmp/image_lab -type f -print' "${stress}"
 }
 
-expect_success "deterministic stress protocol requires bounded parallel runs" verify_stress_contract
+expect_success "deterministic stress protocol requires exact 50/10/4 canonical counts" verify_stress_contract
 
 verify_authoritative_stress_admission() {
   local focused="$1" full="$2" workers="$3" expected="$4"
@@ -385,10 +385,10 @@ SH
   chmod +x "${fake_bin}/ruby" "${fake_bin}/bundle"
 
   set +e
-  output="$(cd "${fixture}/repository" && PATH="${fake_bin}:${PATH}" STRESS_INVOCATION_LOG="${invocation_log}" FOCUSED_REPETITIONS=2 FULL_SUITE_REPETITIONS=2 PARALLEL_WORKERS=2 bash scripts/release/stress_deterministic_gate.sh 2>&1)"
+  output="$(cd "${fixture}/repository" && PATH="${fake_bin}:${PATH}" STRESS_INVOCATION_LOG="${invocation_log}" FOCUSED_REPETITIONS=50 FULL_SUITE_REPETITIONS=10 PARALLEL_WORKERS=4 bash scripts/release/stress_deterministic_gate.sh 2>&1)"
   rc=$?
   set -e
-  ruby_invocations="$(grep -c '^ruby script/benchmark_vips_cpu_8gb.rb --quick --workers 2$' "${invocation_log}" 2>/dev/null || true)"
+  ruby_invocations="$(grep -c '^ruby script/benchmark_vips_cpu_8gb.rb --quick --workers 4$' "${invocation_log}" 2>/dev/null || true)"
   bundle_invocations="$(grep -c '^bundle exec rails test$' "${invocation_log}" 2>/dev/null || true)"
   prepare_invocations="$(grep -c '^bundle exec rails db:prepare$' "${invocation_log}" 2>/dev/null || true)"
   [[ ! -e "${fixture}/repository/script/models/__pycache__" ]] && cleanup_removed=yes || cleanup_removed=no
@@ -397,11 +397,11 @@ SH
   trap - RETURN
 
   [[ "${rc}" -eq 0 ]] &&
-    [[ "${ruby_invocations}" -eq 2 ]] &&
-    [[ "${bundle_invocations}" -eq 2 ]] &&
+    [[ "${ruby_invocations}" -eq 50 ]] &&
+    [[ "${bundle_invocations}" -eq 10 ]] &&
     [[ "${prepare_invocations}" -eq 1 ]] &&
     [[ "${cleanup_removed}" == yes ]] &&
-    grep -Fxq 'PASS deterministic stress focused=2 full=2 workers=2' <<<"${output}"
+    grep -Fxq 'PASS deterministic stress focused=50 full=10 workers=4' <<<"${output}"
 }
 
 expect_success "deterministic stress executes every requested iteration" verify_stress_executes_each_requested_iteration

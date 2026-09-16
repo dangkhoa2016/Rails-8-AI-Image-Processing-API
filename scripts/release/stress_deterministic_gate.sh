@@ -1,14 +1,34 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-FOCUSED_REPETITIONS="${FOCUSED_REPETITIONS:-50}"
-FULL_SUITE_REPETITIONS="${FULL_SUITE_REPETITIONS:-10}"
-PARALLEL_WORKERS="${PARALLEL_WORKERS:-4}"
+AUTHORITATIVE_FOCUSED_REPETITIONS=50
+AUTHORITATIVE_FULL_SUITE_REPETITIONS=10
+AUTHORITATIVE_PARALLEL_WORKERS=4
 
-[[ "${PARALLEL_WORKERS}" =~ ^[0-9]+$ ]] && (( PARALLEL_WORKERS >= 2 )) || {
-  echo 'FAIL PARALLEL_WORKERS must be at least 2' >&2
-  exit 2
+FOCUSED_REPETITIONS="${FOCUSED_REPETITIONS-${AUTHORITATIVE_FOCUSED_REPETITIONS}}"
+FULL_SUITE_REPETITIONS="${FULL_SUITE_REPETITIONS-${AUTHORITATIVE_FULL_SUITE_REPETITIONS}}"
+PARALLEL_WORKERS="${PARALLEL_WORKERS-${AUTHORITATIVE_PARALLEL_WORKERS}}"
+
+assert_canonical_count() {
+  local name="$1" value="$2" expected="$3"
+  if [[ ! "${value}" =~ ^[0-9]+$ ]]; then
+    echo "FAIL ${name} must be a nonnegative integer, got '${value}'" >&2
+    exit 2
+  fi
+  if (( value != expected )); then
+    echo "FAIL ${name} must be exactly ${expected} for the authoritative release contract, got ${value}" >&2
+    exit 2
+  fi
 }
+
+assert_canonical_count FOCUSED_REPETITIONS "${FOCUSED_REPETITIONS}" "${AUTHORITATIVE_FOCUSED_REPETITIONS}"
+assert_canonical_count FULL_SUITE_REPETITIONS "${FULL_SUITE_REPETITIONS}" "${AUTHORITATIVE_FULL_SUITE_REPETITIONS}"
+assert_canonical_count PARALLEL_WORKERS "${PARALLEL_WORKERS}" "${AUTHORITATIVE_PARALLEL_WORKERS}"
+
+if [[ "${STRESS_VALIDATE_ONLY-0}" == "1" ]]; then
+  echo "PASS deterministic stress validation focused=${FOCUSED_REPETITIONS} full=${FULL_SUITE_REPETITIONS} workers=${PARALLEL_WORKERS}"
+  exit 0
+fi
 
 RAILS_ENV=test bundle exec rails db:prepare
 
