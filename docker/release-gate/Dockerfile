@@ -5,6 +5,7 @@ WORKDIR /workspace
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y \
       build-essential \
+      curl \
       git \
       jq \
       libpq-dev \
