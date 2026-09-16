@@ -244,6 +244,7 @@ verify_canonical_runner_contract() {
     grep -Fxq 'COPY Gemfile Gemfile.lock ./' "${dockerfile}" &&
     grep -Fxq 'ENV BUNDLE_FROZEN=true' "${dockerfile}" &&
     grep -Fq 'python3' "${dockerfile}" &&
+    grep -Fq 'jq' "${dockerfile}" &&
     grep -Eq 'image: postgres:17\.11@sha256:[0-9a-f]{64}' "${compose_file}" &&
     ! grep -Fxq '/Gemfile.lock' "${dockerignore}" &&
     ! grep -Fxq 'Gemfile.lock' "${gitignore}"
