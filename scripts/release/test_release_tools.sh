@@ -252,5 +252,17 @@ verify_canonical_runner_contract() {
 expect_success "canonical runner pins images and uses the committed lockfile" \
   verify_canonical_runner_contract
 
+verify_deterministic_gate_contract() {
+  local gate="${SCRIPT_DIR}/verify_deterministic_gate.sh"
+  [[ -x "${gate}" ]] &&
+    grep -Fq 'canonical release gate requires exactly one incremental base' "${gate}" &&
+    grep -Fq "assert_clean 'requires a clean worktree before validation'" "${gate}" &&
+    grep -Fq "assert_clean 'left worktree dirty'" "${gate}" &&
+    grep -Fq 'PARALLEL_WORKERS=4' "${gate}"
+}
+
+expect_success "canonical deterministic gate requires clean state and parallel workers" \
+  verify_deterministic_gate_contract
+
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
