@@ -265,5 +265,26 @@ verify_deterministic_gate_contract() {
 expect_success "canonical deterministic gate requires clean state and parallel workers" \
   verify_deterministic_gate_contract
 
+verify_archive_hygiene_contract() {
+  local helper="${SCRIPT_DIR}/verify_source_archive_hygiene.sh" fixture
+  fixture="$(mktemp -d)"
+  trap 'rm -rf "${fixture}"' RETURN
+  python3 - "${fixture}/forbidden.zip" "${fixture}/clean.zip" <<'PY'
+import sys
+from zipfile import ZipFile
+with ZipFile(sys.argv[1], "w") as archive:
+    archive.writestr("project/docs/superpowers/plan.md", "forbidden")
+with ZipFile(sys.argv[2], "w") as archive:
+    archive.writestr("project/README.md", "clean")
+PY
+  local result=0
+  "${helper}" "${fixture}/clean.zip" && ! "${helper}" "${fixture}/forbidden.zip" || result=1
+  rm -rf "${fixture}"
+  trap - RETURN
+  return "${result}"
+}
+
+expect_success "archive hygiene rejects forbidden source paths" verify_archive_hygiene_contract
+
 printf '\nRelease helper tests: %s passed, %s failed\n' "${pass}" "${fail}"
 [[ "${fail}" -eq 0 ]]
