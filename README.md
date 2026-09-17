@@ -84,6 +84,8 @@ bin/brakeman --no-pager
 
 No deployment application, image registry artifact, cloud account, or public endpoint is configured for this project. The imported deployment files are renamed templates only and must be independently reviewed and qualified in a later deployment phase.
 
+The `v1.0.0` source release does not imply GHCR publication, and no GHCR image currently exists. Normal source-release CI verifies the pre-publication GHCR contract (`scripts/release/test_verify_ghcr_prepublication.sh`) rather than asserting that an image is published; real GHCR artifact verification remains a later image-publication gate.
+
 ## License
 
 This project is distributed under the [MIT License](LICENSE).
