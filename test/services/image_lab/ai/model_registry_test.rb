@@ -4,6 +4,10 @@ require "test_helper"
 require "tmpdir"
 
 class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
+  setup do
+    FakeU2netpModel.calls = []
+  end
+
   def test_loads_the_verified_sigmoid_fixture_and_runs_a_cpu_inference
     model = ImageLab::AI::ModelRegistry.fetch!(:onnx_smoke)
 
@@ -25,10 +29,38 @@ class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
     assert_equal 1, model_ids.uniq.length
   end
 
-  def test_rejects_models_that_are_not_part_of_the_spike
+  def test_rejects_an_uninstalled_u2netp_model
     error = assert_raises(ImageLab::Errors::AiUnavailable) do
       ImageLab::AI::ModelRegistry.fetch!(:u2netp)
     end
+
+    assert_equal "AI model is unavailable", error.message
+  end
+
+  def test_loads_and_caches_a_verified_u2netp_session
+    manifest = FakeU2netpManifest.new
+    registry = ImageLab::AI::ModelRegistry.new(
+      model_factory: FakeU2netpModel,
+      u2netp_manifest_loader: -> { manifest },
+      u2netp_path: "/tmp/u2netp.onnx"
+    )
+
+    first = registry.fetch!(:u2netp)
+    second = registry.fetch!(:u2netp)
+
+    assert_same first, second
+    assert_equal [ [ "/tmp/u2netp.onnx", :onnx ] ], manifest.verified
+    assert_equal [ [ "/tmp/u2netp.onnx", ImageLab::AI::ModelRegistry::SESSION_OPTIONS ] ], FakeU2netpModel.calls
+  end
+
+  def test_rejects_a_u2netp_session_with_mismatched_ports
+    registry = ImageLab::AI::ModelRegistry.new(
+      model_factory: WrongPortModel,
+      u2netp_manifest_loader: -> { FakeU2netpManifest.new },
+      u2netp_path: "/tmp/u2netp.onnx"
+    )
+
+    error = assert_raises(ImageLab::Errors::AiUnavailable) { registry.fetch!(:u2netp) }
 
     assert_equal "AI model is unavailable", error.message
   end
@@ -49,6 +81,52 @@ class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
   end
 
   private
+
+  class FakeU2netpManifest
+    attr_reader :verified
+
+    def initialize
+      @verified = []
+    end
+
+    def input_name = "input"
+    def input_shape = [ 1, 3, 320, 320 ]
+    def input_dtype = "tensor(float)"
+    def output_name = "d0"
+    def output_shape = [ 1, 1, 320, 320 ]
+    def output_dtype = "tensor(float)"
+    def onnx_filename = "u2netp.onnx"
+
+    def verify_artifact!(path:, kind:)
+      @verified << [ path, kind ]
+    end
+  end
+
+  class FakeU2netpModel
+    class << self
+      attr_accessor :calls
+    end
+
+    self.calls = []
+
+    def initialize(path, **options)
+      FakeU2netpModel.calls << [ path, options ]
+    end
+
+    def inputs
+      [ { name: "input", type: "tensor(float)", shape: [ 1, 3, 320, 320 ] } ]
+    end
+
+    def outputs
+      [ { name: "d0", type: "tensor(float)", shape: [ 1, 1, 320, 320 ] } ]
+    end
+  end
+
+  class WrongPortModel < FakeU2netpModel
+    def outputs
+      [ { name: "wrong", type: "tensor(float)", shape: [ 1, 1, 320, 320 ] } ]
+    end
+  end
 
   def zero_tensor
     Array.new(3) { Array.new(4) { Array.new(5, 0.0) } }
