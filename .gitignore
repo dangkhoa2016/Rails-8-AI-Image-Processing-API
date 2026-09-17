@@ -18,6 +18,7 @@ test-reports
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
+/var/models/
 !/log/.keep
 !/tmp/.keep
 
@@ -37,8 +38,8 @@ test-reports
 /config/master.key
 /config/credentials/*.key
 
-# Ignore Gemfile.lock — each Ruby version generates its own
-Gemfile.lock
-
 # Internal agent planning artifacts are not public source.
 /docs/superpowers/
+
+# Linked worktrees are local development artifacts.
+/.worktrees/
