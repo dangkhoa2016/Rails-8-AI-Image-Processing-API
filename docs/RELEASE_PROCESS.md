@@ -7,7 +7,11 @@ after the required validation succeeds on a later clean `main` commit,
 `script/refresh_v1_0_0_tag.sh` replaces the local annotated tag.
 
 No remote tag, GitHub Release, image publication, or deployment is created by
-this process. Resolve its exact current target with:
+this process. A source release does not imply GHCR publication, and no GHCR
+image currently exists. Normal source-release CI verifies the pre-publication
+GHCR contract rather than asserting a published image; real GHCR artifact
+verification remains a later image-publication gate. Resolve its exact current
+target with:
 
 ```sh
 git rev-parse v1.0.0^{commit}

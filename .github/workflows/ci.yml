@@ -293,6 +293,7 @@ jobs:
           bash -n scripts/release/test_release_tools.sh
           bash -n scripts/release/verify_repository.sh
           bash -n scripts/release/verify_ghcr.sh
+          bash -n scripts/release/test_verify_ghcr_prepublication.sh
           bash -n scripts/release/smoke_deployment.sh
 
       - name: Test release tooling
@@ -301,5 +302,5 @@ jobs:
       - name: Verify repository release contract
         run: bash scripts/release/verify_repository.sh
 
-      - name: Verify published GHCR baseline images
-        run: bash scripts/release/verify_ghcr.sh
+      - name: Verify GHCR pre-publication contract
+        run: bash scripts/release/test_verify_ghcr_prepublication.sh
