@@ -33,7 +33,7 @@ class ImageLabPipelineTest < ActiveSupport::TestCase
   end
 
   test "chains grayscale and background through the registered pipeline" do
-    image = Vips::Image.new_from_memory([ 100, 150, 200, 128 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+    image = Vips::Image.new_from_memory([ 64, 64, 64, 128 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
 
     result = ImageLab::Pipeline.call(image, [
       { "op" => "grayscale" },
@@ -42,6 +42,6 @@ class ImageLabPipelineTest < ActiveSupport::TestCase
 
     assert_equal 3, result.bands
     assert_equal :srgb, result.interpretation
-    assert_equal [ 200.0, 200.0, 200.0 ], result.getpoint(0, 0)
+    assert_equal [ 159.0, 159.0, 159.0 ], result.getpoint(0, 0)
   end
 end
