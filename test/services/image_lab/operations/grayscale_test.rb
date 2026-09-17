@@ -12,6 +12,15 @@ class ImageLabOperationsGrayscaleTest < ActiveSupport::TestCase
     assert_equal 1, result.bands
   end
 
+  test "applies luminance weighting to non-neutral colors" do
+    image = Vips::Image.new_from_memory([ 255, 0, 0, 0, 255, 0 ].pack("C*"), 2, 1, 3, :uchar)
+
+    result = ImageLab::Operations::Grayscale.call(image, { "op" => "grayscale" })
+
+    assert_equal [ 124.0 ], result.getpoint(0, 0)
+    assert_equal [ 218.0 ], result.getpoint(1, 0)
+  end
+
   test "rejects extra parameters" do
     image = Vips::Image.new_from_memory([ 255, 0, 0 ].pack("C*"), 1, 1, 3, :uchar)
 
