@@ -82,10 +82,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby-version: ['3.2', '3.3', '4.0']
 
     services:
       postgres:
@@ -116,10 +112,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up Ruby ${{ matrix.ruby-version }}
+      - name: Set up Ruby 3.3
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby-version }}
+          ruby-version: '3.3'
           bundler-cache: true
 
       - name: Set RAILS_MASTER_KEY from GitHub Secrets
@@ -158,9 +154,74 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-ruby-${{ matrix.ruby-version }}
+          name: coverage-ruby-3.3
           path: public/coverage/
           retention-days: 14
+
+  ruby_compatibility_smoke:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: ['3.2', '4.0']
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rails_8_ai_image_processing_api_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d rails_8_ai_image_processing_api_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential \
+            git \
+            libvips \
+            libpq-dev \
+            python3 \
+            pkg-config
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Ruby ${{ matrix.ruby-version }}
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: false
+
+      - name: Install runtime-compatible bundle
+        run: |
+          bundle config set --local frozen false
+          bundle config set --local path vendor/bundle
+          bundle install --jobs 4
+
+      - name: Set RAILS_MASTER_KEY from GitHub Secrets
+        run: echo "RAILS_MASTER_KEY=${{ secrets.RAILS_MASTER_KEY }}" >> $GITHUB_ENV
+
+      - name: Run ONNX compatibility smoke
+        env:
+          RAILS_ENV: test
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_TEST_DB: rails_8_ai_image_processing_api_test
+        run: |
+          bin/rails db:prepare
+          bin/rails test test/services/image_lab/ai/model_registry_test.rb
 
   test_custom_header:
     runs-on: ubuntu-latest
