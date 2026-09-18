@@ -46,8 +46,8 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     out.chomp
   end
 
-  def run_checker(*args)
-    Open3.capture3(CHECKER, *args, chdir: @dir)
+  def run_checker(*args, env: {})
+    Open3.capture3({ "RUBYOPT" => nil, "BUNDLE_GEMFILE" => nil }.merge(env), CHECKER, *args, chdir: @dir)
   end
 
   test "accepts a valid repository" do
@@ -61,13 +61,23 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     assert status.success?
   end
 
-  test "rejects a tracked lockfile" do
+  test "accepts valid UTF-8 Git output under a POSIX locale" do
+    commit(
+      subject: "docs: thêm ghi chú phát hành",
+      body: "- Preserve UTF-8 commit metadata under a POSIX caller locale\n"
+    )
+
+    output, error, status = run_checker("HEAD", env: { "LANG" => "C", "LC_ALL" => "C" })
+
+    assert status.success?, [ output, error ].join("\n")
+  end
+
+  test "accepts the committed application lockfile" do
     commit(subject: "chore: add lockfile", body: "- Track dependencies\n", files: { "Gemfile.lock" => "GEM\n" })
 
-    out, _err, status = run_checker("HEAD")
+    _out, _err, status = run_checker("HEAD")
 
-    assert_not status.success?
-    assert_match(/Gemfile\.lock/, out)
+    assert status.success?
   end
 
   test "rejects a non-conventional subject" do
@@ -86,6 +96,29 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
 
     assert_not status.success?
     assert_match(/bullet/, out)
+  end
+
+  test "rejects a real commit body with literal escaped newlines" do
+    commit(
+      subject: "test: malformed body",
+      body: "- First reason.\\n- Second reason."
+    )
+
+    out, _err, status = run_checker("HEAD")
+
+    assert_not status.success?
+    assert_match(/literal escaped newline/, out)
+  end
+
+  test "accepts a real commit body with physical newline-separated bullets" do
+    commit(
+      subject: "test: well formed body",
+      body: "- First reason.\n- Second reason."
+    )
+
+    _out, _err, status = run_checker("HEAD")
+
+    assert status.success?
   end
 
   test "rejects mismatched author and committer dates" do
@@ -176,6 +209,54 @@ class CheckRepositoryPolicyTest < ActiveSupport::TestCase
     commit(subject: "feat: app change", body: "- Add app code\n", files: { "app/models/user.rb" => "class User\nend\n" })
 
     _out, _err, status = run_checker("HEAD", base)
+
+    assert status.success?
+  end
+
+  test "rejects a protected manual file modified then restored within an incremental range" do
+    commit(subject: "docs: add manual file", body: "- Add protected file\n", files: { "manual/tracker.md" => "original\n" })
+    base = head_sha
+    commit(subject: "docs: modify manual file", body: "- Change protected file\n", files: { "manual/tracker.md" => "changed\n" })
+    commit(subject: "docs: restore manual file", body: "- Restore protected file\n", files: { "manual/tracker.md" => "original\n" })
+
+    output, _error, status = run_checker("HEAD", base)
+
+    assert_not status.success?
+    assert_match(/manual\/tracker\.md/, output)
+  end
+
+  test "rejects a protected manual file deleted then restored within an incremental range" do
+    commit(subject: "docs: add manual file", body: "- Add protected file\n", files: { "manual/tracker.md" => "original\n" })
+    base = head_sha
+    FileUtils.rm(File.join(@dir, "manual", "tracker.md"))
+    run_git("add", "-A")
+    _out, _err, removal_status = run_git("commit", "-m", "chore: remove manual file", "-m", "- Remove protected file")
+    assert removal_status.success?, "failed to create removal commit"
+    commit(subject: "docs: restore manual file", body: "- Restore protected file\n", files: { "manual/tracker.md" => "original\n" })
+
+    output, _error, status = run_checker("HEAD", base)
+
+    assert_not status.success?
+    assert_match(/manual\/tracker\.md/, output)
+  end
+
+  test "accepts legacy manual history when auditing a later range" do
+    commit(subject: "docs: add manual file", body: "- Add protected file\n", files: { "manual/tracker.md" => "original\n" })
+    commit(subject: "docs: amend manual file", body: "- Preserve accepted legacy history\n", files: { "manual/tracker.md" => "legacy\n" })
+    base = head_sha
+    commit(subject: "feat: add later code", body: "- Audit only new commits\n", files: { "app/models/user.rb" => "class User\nend\n" })
+
+    _output, _error, status = run_checker("HEAD", base)
+
+    assert status.success?
+  end
+
+  test "accepts an incremental range that only changes a Bash manual script" do
+    commit(subject: "chore: add manual script", body: "- Add Bash script\n", files: { "manual/check.sh" => "#!/usr/bin/env bash\n" })
+    base = head_sha
+    commit(subject: "chore: extend manual script", body: "- Add strict mode\n", files: { "manual/check.sh" => "#!/usr/bin/env bash\nset -e\n" })
+
+    _output, _error, status = run_checker("HEAD", base)
 
     assert status.success?
   end
