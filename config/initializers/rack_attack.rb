@@ -83,6 +83,11 @@ class Rack::Attack
     req.ip if req.path == "/images/process" && req.post?
   end
 
+  # AI inference is more expensive than deterministic Vips transforms.
+  throttle("image_ai/ip", limit: 5, period: 60) do |req|
+    req.ip if req.path == "/images/remove-background" && req.post?
+  end
+
   # Sign-in: 5 attempts per 60 s per IP.
   # Defends against distributed brute-force campaigns.
   throttle("sign_in/ip", limit: 5, period: 60) do |req|

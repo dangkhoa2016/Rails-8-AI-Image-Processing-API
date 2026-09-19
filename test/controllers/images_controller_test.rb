@@ -35,7 +35,9 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
         "operations" => %w[resize_to_fit resize_to_fill crop rotate flip grayscale brightness contrast saturation tint blur sharpen background],
         "request_content_type" => "multipart/form-data",
         "response_content_type" => "image/png",
-        "response_content_types" => %w[image/png image/jpeg image/webp]
+        "response_content_types" => %w[image/png image/jpeg image/webp],
+        "ai_operations" => %w[remove_background],
+        "ai_enabled" => false
       },
       json_response
     )
@@ -47,6 +49,71 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal %w[image/png image/jpeg image/webp], json_response.fetch("response_content_types")
     assert_equal "image/png", json_response.fetch("response_content_type")
+  end
+
+
+  test "background removal requires authentication" do
+    post "/images/remove-background", params: { image: tiny_png_upload }
+
+    assert_response :unauthorized
+  end
+
+  test "background removal fails closed with 503 when AI is disabled" do
+    with_env("IMAGE_AI_ENABLED" => "false") do
+      post "/images/remove-background", params: { image: tiny_png_upload }, headers: authenticated_headers
+    end
+
+    assert_response :service_unavailable
+    assert_equal "AI model is unavailable", json_response.fetch("error")
+  end
+
+  test "background removal exposes transparent PNG output when AI is enabled" do
+    transparent = Vips::Image.new_from_memory([ 255, 0, 0, 255 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      ImageLab::AI::BackgroundRemoval.stub(:call, transparent) do
+        post "/images/remove-background", params: { image: tiny_png_upload }, headers: authenticated_headers
+      end
+    end
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal "1", response.headers.fetch("X-Image-Width")
+    assert_equal "1", response.headers.fetch("X-Image-Height")
+    assert_equal "no-store", response.headers.fetch("Cache-Control")
+  end
+
+  test "background removal accepts only the transparent output mode" do
+    transparent = Vips::Image.new_from_memory([ 255, 0, 0, 255 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      ImageLab::AI::BackgroundRemoval.stub(:call, transparent) do
+        post "/images/remove-background", params: { image: tiny_png_upload, output: "mask" }, headers: authenticated_headers
+      end
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "background removal output must be transparent", json_response.fetch("error")
+  end
+
+  test "background removal accepts WebP but rejects JPEG" do
+    transparent = Vips::Image.new_from_memory([ 255, 0, 0, 255 ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      ImageLab::AI::BackgroundRemoval.stub(:call, transparent) do
+        post "/images/remove-background", params: { image: tiny_png_upload, format: "webp", quality: "80" }, headers: authenticated_headers
+      end
+    end
+    assert_response :success
+    assert_equal "image/webp", response.media_type
+
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      ImageLab::AI::BackgroundRemoval.stub(:call, transparent) do
+        post "/images/remove-background", params: { image: tiny_png_upload, format: "jpeg" }, headers: authenticated_headers
+      end
+    end
+    assert_response :unprocessable_entity
+    assert_equal "background removal format must be png or webp", json_response.fetch("error")
   end
 
   test "processing rejects a missing image" do

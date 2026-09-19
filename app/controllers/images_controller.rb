@@ -2,6 +2,7 @@
 
 require "json"
 require_relative "../services/image_lab/pipeline"
+require_relative "../services/image_lab/ai/background_removal"
 require_relative "../services/image_lab/operations/encode"
 
 class ImagesController < ApplicationController
@@ -17,6 +18,7 @@ class ImagesController < ApplicationController
               ImageLab::Errors::OperationLimitExceeded,
               ImageLab::Errors::OutputLimitExceeded,
               with: :unprocessable_image_input
+  rescue_from ImageLab::Errors::AiUnavailable, with: :ai_unavailable
 
   def capabilities
     render json: {
@@ -24,8 +26,33 @@ class ImagesController < ApplicationController
       operations: ImageLab::OperationRegistry.available,
       request_content_type: "multipart/form-data",
       response_content_type: "image/png",
-      response_content_types: %w[image/png image/jpeg image/webp]
+      response_content_types: %w[image/png image/jpeg image/webp],
+      ai_operations: %w[remove_background],
+      ai_enabled: ImageLab::AI::BackgroundRemoval.enabled?
     }
+  end
+
+  def remove_background
+    uploaded_image = params.require(:image)
+    validate_ai_output!
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    ImageLab::Input.with_image(uploaded_image) do |input|
+      image = ImageLab::AI::BackgroundRemoval.call(
+        input,
+        background: params[:background],
+        feather: params[:feather]
+      )
+      encoded = ImageLab::Operations::Encode.call(
+        image,
+        format: parse_ai_format,
+        quality: parse_quality
+      )
+
+      response.headers["Cache-Control"] = "no-store"
+      set_image_metadata_headers(image, started_at, encoded.format)
+      send_data encoded.bytes, type: encoded.content_type, disposition: "inline"
+    end
   end
 
   def process_image
@@ -46,6 +73,22 @@ class ImagesController < ApplicationController
   end
 
   private
+
+  def validate_ai_output!
+    output = params[:output].presence || "transparent"
+    return if output == "transparent"
+
+    raise ImageLab::Errors::InvalidOperation, "background removal output must be transparent"
+  end
+
+  def parse_ai_format
+    format = params[:format].presence || "png"
+    unless %w[png webp].include?(format)
+      raise ImageLab::Errors::InvalidOperation, "background removal format must be png or webp"
+    end
+
+    format
+  end
 
   def parse_operations
     value = params.require(:operations)
@@ -70,6 +113,10 @@ class ImagesController < ApplicationController
 
   def unprocessable_image_input(exception)
     render json: { error: exception.message }, status: :unprocessable_entity
+  end
+
+  def ai_unavailable(exception)
+    render json: { error: exception.message }, status: :service_unavailable
   end
 
   def set_image_metadata_headers(image, started_at, format)
