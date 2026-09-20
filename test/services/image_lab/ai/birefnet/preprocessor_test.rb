@@ -72,6 +72,12 @@ class ImageLab::AI::BirefnetPreprocessorTest < ActiveSupport::TestCase
   end
 
   def rgba_image(alpha:)
-    Vips::Image.new_from_memory([ 100, 150, 200, alpha ].pack("C*"), 1, 1, 4, :uchar).copy(interpretation: :srgb)
+    Vips::Image.new_from_memory_copy(
+      [ 100, 150, 200, alpha ].pack("C*"),
+      1,
+      1,
+      4,
+      :uchar
+    ).copy(interpretation: :srgb)
   end
 end
