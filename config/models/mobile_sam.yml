@@ -1,0 +1,40 @@
+name: mobile_sam_vit_t
+upstream_repository: https://github.com/ChaoningZhang/MobileSAM
+upstream_revision: f706ad9c4eb7f219c00d9050e46328518ffb65d2
+encoder:
+  filename: mobile_sam_vit_t_image_encoder.onnx
+  sha256: 8bd9bd6fa57c5b664e972a2869dbf1f446ff5465889c3cb4f80d5f7cfe870988
+  file_size: 27969729
+  input:
+    name: image
+    dtype: tensor(float)
+    shape: [1, 3, 1024, 1024]
+  output:
+    name: image_embeddings
+    dtype: tensor(float)
+    shape: [1, 256, 64, 64]
+decoder:
+  filename: mobile_sam_prompt_mask_decoder.onnx
+  sha256: abf884441fcc095f21af4e39e782a84f9fc83b3af06b6d2f0c6f85641b50dbf7
+  file_size: 16509691
+  inputs:
+    - {name: image_embeddings, dtype: tensor(float), shape: [1, 256, 64, 64]}
+    - {name: point_coords, dtype: tensor(float), shape: [1, num_points, 2]}
+    - {name: point_labels, dtype: tensor(float), shape: [1, num_points]}
+    - {name: mask_input, dtype: tensor(float), shape: [1, 1, 256, 256]}
+    - {name: has_mask_input, dtype: tensor(float), shape: [1]}
+    - {name: orig_im_size, dtype: tensor(float), shape: [2]}
+  outputs:
+    - {name: masks, dtype: tensor(float), shape: [Resizemasks_dim_0, Resizemasks_dim_1, Resizemasks_dim_2, Resizemasks_dim_3]}
+    - {name: iou_predictions, dtype: tensor(float), shape: [Gemmiou_predictions_dim_0, 4]}
+    - {name: low_res_masks, dtype: tensor(float), shape: [Reshapelow_res_masks_dim_0, Reshapelow_res_masks_dim_1, Reshapelow_res_masks_dim_2, Reshapelow_res_masks_dim_3]}
+preprocessing:
+  size: 1024
+  resize: linear
+  mean: [123.675, 116.28, 103.53]
+  std: [58.395, 57.12, 57.375]
+postprocessing:
+  threshold: 0.0
+  point_tokens: [1, 2, 3]
+  box_token: 0
+license: Apache-2.0
