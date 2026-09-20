@@ -41,6 +41,22 @@ class ImageLab::AI::BackgroundRemovalTest < ActiveSupport::TestCase
     end
   end
 
+  test "selects the integrated A2 BiRefNet provider by default" do
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      mask = Vips::Image.new_from_memory([ 1.0, 1.0 ].pack("f*"), 2, 1, 1, :float)
+      provider_called = false
+      fake_call = ->(_image) { provider_called = true; FakeMask.new(mask) }
+
+      ImageLab::AI::Birefnet.stub(:call, fake_call) do
+        result = ImageLab::AI::BackgroundRemoval.call(rgb_image)
+
+        assert_equal [ 2, 1, 4 ], [ result.width, result.height, result.bands ]
+      end
+
+      assert provider_called
+    end
+  end
+
   test "rejects invalid background and feather inputs before inference output is encoded" do
     with_env("IMAGE_AI_ENABLED" => "true") do
       assert_raises(ImageLab::Errors::InvalidOperation) do

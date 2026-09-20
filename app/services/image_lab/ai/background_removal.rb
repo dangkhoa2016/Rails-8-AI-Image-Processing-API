@@ -3,6 +3,7 @@
 require "vips"
 require_relative "../errors"
 require_relative "../operations/color"
+require_relative "birefnet"
 require_relative "u2netp"
 
 module ImageLab
@@ -18,7 +19,7 @@ module ImageLab
         value == "true"
       end
 
-      def self.call(image, background: nil, feather: 0, mask_provider: U2netp)
+      def self.call(image, background: nil, feather: 0, mask_provider: Birefnet)
         raise Errors::AiUnavailable, U2netpManifest::UNAVAILABLE_MESSAGE unless enabled?
 
         feather = normalize_feather(feather)
