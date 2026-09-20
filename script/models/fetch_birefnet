@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+manifest_path="$repository_root/config/models/birefnet.yml"
+model_directory="$repository_root/var/models"
+
+usage() {
+  printf '%s\n' 'Usage: script/models/fetch_birefnet [--manifest PATH] [--model-directory PATH]'
+}
+
+while (( $# > 0 )); do
+  case "$1" in
+    --manifest)
+      manifest_path="${2:?--manifest requires a path}"
+      shift 2
+      ;;
+    --model-directory)
+      model_directory="${2:?--model-directory requires a path}"
+      shift 2
+      ;;
+    --help)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'unknown option: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+cd "$repository_root"
+mapfile -t artifact < <(
+  MANIFEST_PATH="$manifest_path" bundle exec ruby -r ./config/environment -e '
+    manifest = ImageLab::AI::BirefnetManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+    puts manifest.onnx_download_url
+    puts manifest.onnx_filename
+  '
+)
+
+if (( ${#artifact[@]} != 2 )); then
+  printf '%s\n' 'manifest validation failed' >&2
+  exit 1
+fi
+
+url="${artifact[0]}"
+filename="${artifact[1]}"
+mkdir -p "$model_directory"
+temporary_directory="$(mktemp -d "$model_directory/.birefnet-fetch.XXXXXX")"
+trap 'rm -rf "$temporary_directory"' EXIT
+temporary_path="$temporary_directory/$filename"
+final_path="$model_directory/$filename"
+
+if ! curl --fail --location --retry 3 --output "$temporary_path" "$url"; then
+  printf '%s\n' 'download failed' >&2
+  exit 1
+fi
+
+if ! MANIFEST_PATH="$manifest_path" ARTIFACT_PATH="$temporary_path" bundle exec ruby -r ./config/environment -e '
+  manifest = ImageLab::AI::BirefnetManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+  manifest.verify_artifact!(path: ENV.fetch("ARTIFACT_PATH"), kind: :onnx)
+'; then
+  printf '%s\n' 'download verification failed' >&2
+  exit 1
+fi
+
+mv -f "$temporary_path" "$final_path"
+printf 'fetched=%s\n' "$final_path"

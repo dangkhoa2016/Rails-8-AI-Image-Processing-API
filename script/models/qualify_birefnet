@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+manifest_path="$repository_root/config/models/birefnet.yml"
+model_directory="$repository_root/var/models"
+
+if (( $# > 0 )); then
+  printf '%s\n' 'Usage: script/models/qualify_birefnet' >&2
+  printf '%s\n' 'Validates and atomically installs var/models/BiRefNet-general-epoch_244.onnx from the committed manifest.' >&2
+  exit 2
+fi
+
+cd "$repository_root"
+printf 'validating committed BirefNet manifest...\n'
+MANIFEST_PATH="$manifest_path" bundle exec ruby -r ./config/environment -e '
+  manifest = ImageLab::AI::BirefnetManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+  puts "manifest_validated=#{manifest.name} sha256=#{manifest.data.fetch("onnx").fetch("sha256")}"
+'
+
+target="$model_directory/BiRefNet-general-epoch_244.onnx"
+if [[ -s "$target" ]]; then
+  printf 'verifying installed onnx artifact...\n'
+  MANIFEST_PATH="$manifest_path" ARTIFACT_PATH="$target" bundle exec ruby -r ./config/environment -e '
+    manifest = ImageLab::AI::BirefnetManifest.load!(path: ENV.fetch("MANIFEST_PATH"))
+    manifest.verify_artifact!(path: ENV.fetch("ARTIFACT_PATH"), kind: :onnx)
+  '
+  printf 'qualified=%s\n' "$target"
+else
+  printf '%s\n' 'var/models/BiRefNet-general-epoch_244.onnx is absent; run script/models/fetch_birefnet first' >&2
+  exit 1
+fi

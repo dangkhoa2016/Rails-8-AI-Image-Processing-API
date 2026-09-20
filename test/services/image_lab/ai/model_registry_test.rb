@@ -6,6 +6,7 @@ require "tmpdir"
 class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
   setup do
     FakeU2netpModel.calls = []
+    FakeBirefnetModel.calls = []
   end
 
   def test_loads_the_verified_sigmoid_fixture_and_runs_a_cpu_inference
@@ -61,6 +62,45 @@ class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
     )
 
     error = assert_raises(ImageLab::Errors::AiUnavailable) { registry.fetch!(:u2netp) }
+
+    assert_equal "AI model is unavailable", error.message
+  end
+
+  def test_rejects_an_uninstalled_birefnet_model
+    registry = ImageLab::AI::ModelRegistry.new(birefnet_path: "/tmp/absent-birefnet.onnx")
+
+    error = assert_raises(ImageLab::Errors::AiUnavailable) do
+      registry.fetch!(:birefnet)
+    end
+
+    assert_equal "AI model is unavailable", error.message
+  end
+
+  def test_loads_and_caches_a_verified_birefnet_session_with_cpu_arena_disabled
+    manifest = FakeBirefnetManifest.new
+    registry = ImageLab::AI::ModelRegistry.new(
+      model_factory: FakeBirefnetModel,
+      birefnet_manifest_loader: -> { manifest },
+      birefnet_path: "/tmp/birefnet.onnx"
+    )
+
+    first = registry.fetch!(:birefnet)
+    second = registry.fetch!(:birefnet)
+
+    assert_same first, second
+    assert_equal [ "/tmp/birefnet.onnx" ], manifest.verified
+    assert_equal false, ImageLab::AI::ModelRegistry::BIREFNET_SESSION_OPTIONS.fetch(:enable_cpu_mem_arena)
+    assert_equal [ [ "/tmp/birefnet.onnx", ImageLab::AI::ModelRegistry::BIREFNET_SESSION_OPTIONS ] ], FakeBirefnetModel.calls
+  end
+
+  def test_rejects_a_birefnet_session_with_mismatched_ports
+    registry = ImageLab::AI::ModelRegistry.new(
+      model_factory: WrongBirefnetPortModel,
+      birefnet_manifest_loader: -> { FakeBirefnetManifest.new },
+      birefnet_path: "/tmp/birefnet.onnx"
+    )
+
+    error = assert_raises(ImageLab::Errors::AiUnavailable) { registry.fetch!(:birefnet) }
 
     assert_equal "AI model is unavailable", error.message
   end
@@ -125,6 +165,52 @@ class ImageLab::AI::ModelRegistryTest < ActiveSupport::TestCase
   class WrongPortModel < FakeU2netpModel
     def outputs
       [ { name: "wrong", type: "tensor(float)", shape: [ 1, 1, 320, 320 ] } ]
+    end
+  end
+
+  class FakeBirefnetManifest
+    attr_reader :verified
+
+    def initialize
+      @verified = []
+    end
+
+    def input_name = "input_image"
+    def input_shape = [ 1, 3, 1024, 1024 ]
+    def input_dtype = "tensor(float)"
+    def output_name = "output_image"
+    def output_shape = [ 1, 1, 1024, 1024 ]
+    def output_dtype = "tensor(float)"
+    def onnx_filename = "BiRefNet-general-epoch_244.onnx"
+
+    def verify_artifact!(path:, kind: :onnx)
+      @verified << path
+    end
+  end
+
+  class FakeBirefnetModel
+    class << self
+      attr_accessor :calls
+    end
+
+    self.calls = []
+
+    def initialize(path, **options)
+      FakeBirefnetModel.calls << [ path, options ]
+    end
+
+    def inputs
+      [ { name: "input_image", type: "tensor(float)", shape: [ 1, 3, 1024, 1024 ] } ]
+    end
+
+    def outputs
+      [ { name: "output_image", type: "tensor(float)", shape: [ 1, 1, 1024, 1024 ] } ]
+    end
+  end
+
+  class WrongBirefnetPortModel < FakeBirefnetModel
+    def outputs
+      [ { name: "wrong", type: "tensor(float)", shape: [ 1, 1, 1024, 1024 ] } ]
     end
   end
 
