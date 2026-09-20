@@ -5,19 +5,41 @@
 
 > Ngôn ngữ: [English](README.md) | **Tiếng Việt**
 
-Rails 8 API có xác thực cho xử lý ảnh xác định và xử lý ảnh AI nhẹ, CPU-only. Các phép biến đổi xác định dùng trực tiếp `ruby-vips`/libvips. U²-NetP chạy local qua ONNX Runtime, tạo foreground mask để libvips thực hiện remove-background.
+Rails 8 API có xác thực cho xử lý ảnh xác định và xử lý ảnh AI nhẹ, CPU-only.
+
+- Các phép biến đổi xác định dùng trực tiếp `ruby-vips`/libvips.
+- AI remove-background chạy BiRefNet local qua ONNX Runtime CPU backend bên
+  trong Ruby, tạo foreground mask để libvips thực hiện composition.
+
+`v1.0.0` là public source release đầu tiên của project. Xem
+[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) cho
+scope đã accept và [`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.vi.md)
+cho qualification chạy CPU đằng sau release này.
 
 ## Trạng thái project
 
-Project được giữ ở trạng thái **pre-1.0** cho tới khi hoàn tất các gate AI và deployment.
+`v1.0.0` được công bố là public community source release.
 
-- Baseline Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack và security vẫn được giữ nguyên.
-- `GET /images/capabilities` và authenticated multipart `POST /images/process` xử lý JPEG, PNG và WebP bằng libvips với giới hạn input/output/resource tường minh.
-- Authenticated `POST /images/remove-background` là public U²-NetP background-removal contract. AI fail-closed và chỉ được bật khi đặt `IMAGE_AI_ENABLED=true`.
-- Model U²-NetP ONNX không được commit vào Git. Provenance, conversion recipe, filename, tensor contract và SHA-256 authority được pin và kiểm tra trước khi load runtime.
-- Python không thuộc production inference. Ruby/Vips xử lý preprocessing và composition; ONNX Runtime CPU thực hiện model inference.
-- Bằng chứng chất lượng segmentation với model thật và qualification CPU/8 GiB vẫn là release gate bắt buộc. Repository đã có harness để chạy các gate này nhưng không tuyên bố PASS khi chưa có observed evidence.
-- Source repository không đồng nghĩa với production deployment hoặc GHCR artifact.
+- Baseline Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack và
+  security hiện có là nền tảng xác thực.
+- `GET /images/capabilities` và authenticated multipart `POST /images/process`
+  xử lý JPEG, PNG và WebP bằng libvips với giới hạn input/output/resource
+  tường minh.
+- Authenticated `POST /images/remove-background` là public AI background
+  removal contract. AI fail-closed và chỉ được bật khi đặt
+  `IMAGE_AI_ENABLED=true`.
+- Model ONNX BiRefNet không được commit vào Git. Provenance, filename, tensor
+  contract, dung lượng và SHA-256 authority được pin trong
+  [`config/models/birefnet.yml`](config/models/birefnet.yml) và kiểm tra
+  trước khi load runtime.
+- Python không thuộc production inference. Ruby/Vips xử lý preprocessing và
+  composition; ONNX Runtime CPU backend thực hiện model inference.
+- Một CPU runtime qualification chính thức đã PASS trong provider-managed
+  Modal Function container với memory request 8192 MiB và hard limit
+  8192 MiB. Đây là capacity qualification, không phải production-traffic hay
+  SLA claim. Xem [`docs/BIREFNET_CPU_QUALIFICATION.vi.md`](docs/BIREFNET_CPU_QUALIFICATION.vi.md).
+- Source repository này không ngụ ý production deployment, hosted public
+  endpoint hoặc GHCR artifact.
 
 Gem `image_processing` được chủ đích loại khỏi kiến trúc.
 
@@ -27,7 +49,9 @@ Project bắt đầu từ source snapshot của:
 
 https://github.com/dangkhoa2016/Rails-8-API-Authentication
 
-Snapshot được import thành một root commit duy nhất. Development, versioning, release, CI và deployment authority của project này là độc lập. Tài liệu upstream lịch sử trong [`docs/history/`](docs/history/) chỉ dùng cho attribution.
+Snapshot được import thành một root commit duy nhất. Development, versioning,
+release, CI và deployment authority của project này là độc lập. Tài liệu
+upstream lịch sử trong [`docs/history/`](docs/history/) chỉ dùng cho attribution.
 
 ## Phát triển local
 
@@ -46,13 +70,17 @@ bundle install
 bin/rails db:prepare
 ```
 
-Deterministic image processing không cần AI model. Để chạy U²-NetP local, cài model đã được checksum-qualify theo provenance workflow rồi bật AI tường minh:
+Deterministic image processing không cần AI model. Để chạy BiRefNet local,
+cài model đã được checksum-qualify theo provenance workflow rồi bật AI tường
+minh:
 
 ```bash
+script/models/fetch_birefnet
 IMAGE_AI_ENABLED=true bin/dev
 ```
 
-Model authority mặc định được mô tả tại [`docs/U2NETP_MODEL_PROVENANCE.md`](docs/U2NETP_MODEL_PROVENANCE.md).
+Artifact authority mặc định của BiRefNet được mô tả tại
+[`docs/BIREFNET_CPU_QUALIFICATION.vi.md`](docs/BIREFNET_CPU_QUALIFICATION.vi.md).
 
 ## Public image endpoints
 
@@ -64,7 +92,17 @@ POST /images/remove-background
 
 Tất cả image endpoint đều yêu cầu authenticated active user.
 
-`POST /images/remove-background` nhận JPEG, PNG hoặc WebP và trả PNG hoặc WebP. Không truyền `background` sẽ trả ảnh trong suốt; `background=#RRGGBB` dùng libvips để composite nền màu xác định.
+`POST /images/process` là deterministic Vips pipeline. Endpoint này yêu cầu
+tham số `operations` và nhận input JPEG, PNG hoặc WebP.
+
+`POST /images/remove-background` nhận JPEG, PNG hoặc WebP và trả PNG hoặc
+WebP. Không truyền `background` sẽ trả ảnh trong suốt; `background=#RRGGBB`
+dùng libvips để composite nền màu xác định. Tham số tùy chọn: `feather`
+(0–20), `format` (`png`/`webp`) và `quality` (1–100). Mask provider mặc định
+của endpoint này là BiRefNet.
+
+AI fail-closed: khi `IMAGE_AI_ENABLED` không phải `true`, endpoint trả về
+`503 AI model is unavailable`.
 
 ## Kiểm tra
 
@@ -74,24 +112,24 @@ bin/rubocop
 bin/brakeman --no-pager
 ```
 
-Quality gate với model thật và CPU/8 GiB qualification có harness fail-closed riêng; việc có harness không tự động là bằng chứng PASS.
+BiRefNet quality validation và CPU runtime qualification 8-GiB được mô tả trong
+[`docs/BIREFNET_CPU_QUALIFICATION.vi.md`](docs/BIREFNET_CPU_QUALIFICATION.vi.md).
 
 ## Tài liệu
 
 - [Mục lục tài liệu](docs/README.md)
 - [Image processing contract](docs/IMAGE_PROCESSING_CONTRACT.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
-- [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
-- [U²-NetP preprocessing](docs/U2NETP_PREPROCESSING.md)
-- [U²-NetP CPU inference](docs/U2NETP_INFERENCE.md)
-- [U²-NetP background removal](docs/U2NETP_BACKGROUND_REMOVAL.md)
-- [U²-NetP CPU / 8 GiB qualification](docs/benchmarks/u2netp-cpu-8gb.md)
+- [BiRefNet CPU qualification](docs/BIREFNET_CPU_QUALIFICATION.vi.md)
+- [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Lộ trình release](docs/RELEASE_PROCESS.vi.md)
 - [Changelog project](CHANGELOG.md)
 
 ## Deployment
 
-Source tree này chưa thiết lập production deployment, image registry artifact hoặc public endpoint. Deployment qualification chỉ bắt đầu sau khi AI quality/resource qualification local hoàn tất.
+Repository này không thiết lập hosted production deployment, live public
+endpoint hoặc image registry artifact. Deployment là hoạt động riêng sau này,
+ngoài scope của v1.0.0 source release.
 
 ## License
 

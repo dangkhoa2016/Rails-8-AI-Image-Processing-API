@@ -19,12 +19,17 @@
 
 ## AI
 
+- [BiRefNet CPU qualification](BIREFNET_CPU_QUALIFICATION.md)
 - [ONNX Runtime feasibility](ONNX_RUNTIME_FEASIBILITY.md)
 - [U²-NetP model provenance](U2NETP_MODEL_PROVENANCE.md)
 - [U²-NetP preprocessing](U2NETP_PREPROCESSING.md)
 - [U²-NetP CPU inference and foreground masks](U2NETP_INFERENCE.md)
 - [U²-NetP background removal](U2NETP_BACKGROUND_REMOVAL.md)
 - [U²-NetP CPU / 8 GiB qualification](benchmarks/u2netp-cpu-8gb.md)
+
+## Releases
+
+- [v1.0.0 acceptance record](releases/v1.0.0-acceptance.md)
 
 ## Project operations
 
