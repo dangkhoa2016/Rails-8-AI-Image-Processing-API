@@ -3,6 +3,7 @@
 require "json"
 require_relative "../services/image_lab/pipeline"
 require_relative "../services/image_lab/ai/background_removal"
+require_relative "../services/image_lab/ai/mobile_sam"
 require_relative "../services/image_lab/operations/encode"
 
 class ImagesController < ApplicationController
@@ -27,7 +28,7 @@ class ImagesController < ApplicationController
       request_content_type: "multipart/form-data",
       response_content_type: "image/png",
       response_content_types: %w[image/png image/jpeg image/webp],
-      ai_operations: %w[remove_background],
+      ai_operations: %w[remove_background segment],
       ai_enabled: ImageLab::AI::BackgroundRemoval.enabled?
     }
   end
@@ -55,6 +56,22 @@ class ImagesController < ApplicationController
     end
   end
 
+  def segment
+    uploaded_image = params.require(:image)
+    validate_segment_output!
+    prompt = ImageLab::AI::MobileSam.parse_prompt(params.require(:prompt))
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    ImageLab::Input.with_image(uploaded_image) do |input|
+      mask = ImageLab::AI::MobileSam.call(input, prompt:)
+      encoded = ImageLab::Operations::Encode.call(mask, format: "png", quality: nil)
+
+      response.headers["Cache-Control"] = "no-store"
+      set_image_metadata_headers(mask, started_at, encoded.format)
+      send_data encoded.bytes, type: encoded.content_type, disposition: "inline"
+    end
+  end
+
   def process_image
     uploaded_image = params.require(:image)
     started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -73,6 +90,13 @@ class ImagesController < ApplicationController
   end
 
   private
+
+  def validate_segment_output!
+    output = params[:output].presence || "mask"
+    return if output == "mask"
+
+    raise ImageLab::Errors::InvalidOperation, "segmentation output must be mask"
+  end
 
   def validate_ai_output!
     output = params[:output].presence || "transparent"
