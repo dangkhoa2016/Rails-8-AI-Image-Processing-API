@@ -101,7 +101,7 @@ benchmark for arbitrary images.
 formal Modal evidence SHA-256:
 d2bef3d1a1b911ed82e1822debe9d17cd5c50acd539d822f733065e25bf5bdb4
 
-post-review corrective evidence SHA-256:
+accepted evidence SHA-256:
 b73eb8e8a635f9c3efb910cb110f6c6e2aadcb79ca24f50223bc7f1778c7dcba
 
 controller/runner source supplement SHA-256:
