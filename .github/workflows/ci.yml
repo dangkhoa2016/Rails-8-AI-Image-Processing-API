@@ -359,3 +359,25 @@ jobs:
 
       - name: Verify repository release contract
         run: bash scripts/release/verify_repository.sh
+
+
+  docker_cold_build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Build production Docker image from a cold cache
+        run: |
+          docker build \
+            --pull \
+            --no-cache \
+            --tag rails8-ai-image-processing:ci \
+            --file Dockerfile \
+            .
+
+      - name: Inspect built image
+        run: |
+          docker image inspect rails8-ai-image-processing:ci \
+            --format 'id={{.Id}} size={{.Size}}'
