@@ -1,0 +1,104 @@
+name: Publish v1.0.0 Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    env:
+      ASSET: rails8-ai-v1.0.0-evidence-2026-09-23.tar.gz
+    steps:
+      - name: Checkout qualified main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Verify publication preconditions
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          test "$MAIN_SHA" = "$TARGET_SHA"
+
+          CURRENT_TAG_TARGET="$(git ls-remote origin 'refs/tags/v1.0.0^{}' | awk '{print $1}')"
+          if [[ -z "$CURRENT_TAG_TARGET" ]]; then
+            echo 'mode=publish' >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_TAG_TARGET" = "$TARGET_SHA" ]]; then
+            echo 'mode=already-published' >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=noop' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create annotated v1.0.0 tag
+        if: steps.gate.outputs.mode == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Đăng Khoa'
+          git config user.email 'i.am@dangkhoa.dev'
+          git tag -a v1.0.0 '${{ github.event.workflow_run.head_sha }}'             -m 'v1.0.0 - Rails 8 AI Image Processing API'
+          git push origin refs/tags/v1.0.0
+
+      - name: Build release evidence
+        if: steps.gate.outputs.mode == 'publish'
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          TREE_SHA="$(git rev-parse "${TARGET_SHA}^{tree}")"
+          TAG_OBJECT="$(git rev-parse refs/tags/v1.0.0)"
+          TAG_TARGET="$(git rev-parse 'refs/tags/v1.0.0^{}')"
+          RUN_ID='${{ github.event.workflow_run.id }}'
+          test "$TAG_TARGET" = "$TARGET_SHA"
+
+          mkdir -p v1.0.0-evidence
+          cp docs/releases/v1.0.0-acceptance.md v1.0.0-evidence/
+          cat > v1.0.0-evidence/RELEASE-REPORT.txt <<EOF
+          PUBLICATION_REVIEW=PASS
+          PUBLIC_VERSION=v1.0.0
+          MAIN_SHA=$TARGET_SHA
+          TREE_SHA=$TREE_SHA
+          CI_RUN_ID=$RUN_ID
+          TAG_OBJECT=$TAG_OBJECT
+          TAG_TARGET=$TAG_TARGET
+          DOCKER_COLD_BUILD=PASS
+          GHCR_PUBLICATION_STATE=NOT_EVALUATED_BY_SOURCE_RELEASE_WORKFLOW
+          PRODUCTION_DEPLOYMENT_STATE=NOT_EVALUATED_BY_SOURCE_RELEASE_WORKFLOW
+          EOF
+
+          sha256sum             v1.0.0-evidence/RELEASE-REPORT.txt             v1.0.0-evidence/v1.0.0-acceptance.md             > v1.0.0-evidence/SHA256SUMS
+          tar -czf "$ASSET" v1.0.0-evidence
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+          echo "tree_sha=$TREE_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag_object=$TAG_OBJECT" >> "$GITHUB_OUTPUT"
+
+      - name: Render release notes
+        if: steps.gate.outputs.mode == 'publish'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sed             -e "s/__MAIN_SHA__/${{ github.event.workflow_run.head_sha }}/g"              -e "s/__TREE_SHA__/${{ steps.evidence.outputs.tree_sha }}/g"             -e "s/__TAG_OBJECT__/${{ steps.evidence.outputs.tag_object }}/g"             -e "s/__CI_RUN_ID__/${{ github.event.workflow_run.id }}/g"             .github/release/v1.0.0-notes.md > /tmp/v1.0.0-notes.md
+
+      - name: Publish GitHub Release
+        if: steps.gate.outputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v1.0.0            "$ASSET" "$ASSET.sha256"             --title v1.0.0             --target '${{ github.event.workflow_run.head_sha }}'             --notes-file /tmp/v1.0.0-notes.md
