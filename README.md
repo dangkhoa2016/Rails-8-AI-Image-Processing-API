@@ -13,27 +13,30 @@ lightweight CPU-only AI-assisted image processing.
   backend inside Ruby and produces a foreground mask that libvips uses for
   composition.
 
-`v1.0.0` is this project's first public source release. See
+`v1.0.0` is this project's first public source release and includes both the
+BiRefNet background-removal API and MobileSAM segmentation API. See
 [`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) for
-the accepted scope and [`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.md)
-for the CPU runtime qualification behind it.
+the complete accepted scope.
 
 ## Project status
 
-`v1.0.0` is declared as a public community source release.
+`v1.0.0` is the project's first public community source release.
 
 - Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack, and the
   existing security baseline are the authentication foundation.
 - `GET /images/capabilities` and authenticated multipart `POST /images/process`
   provide deterministic JPEG, PNG, and WebP processing with explicit
   input/output/resource limits.
-- Authenticated `POST /images/remove-background` is the public AI background
-  removal contract. AI is fail-closed and must be explicitly enabled with
+- Authenticated `POST /images/remove-background` is the AI background-removal
+  contract.
+- Authenticated `POST /images/segment` is the MobileSAM prompt-segmentation
+  contract. It accepts one point or box prompt and returns a source-sized
+  binary PNG mask.
+- AI is fail-closed and must be explicitly enabled with
   `IMAGE_AI_ENABLED=true`.
-- The BiRefNet ONNX model is not committed to Git. Its provenance, filename,
-  tensor contract, byte size, and SHA-256 authority are pinned in
-  [`config/models/birefnet.yml`](config/models/birefnet.yml) and verified
-  before runtime loading.
+- BiRefNet and MobileSAM ONNX artifacts are not committed to Git. Their
+  provenance, filenames, tensor contracts, byte sizes, and SHA-256 authorities
+  are pinned in `config/models/` and verified before runtime loading.
 - Python is not part of production inference. Ruby/Vips performs preprocessing
   and composition; the ONNX Runtime CPU backend performs model inference.
 - A formal CPU runtime qualification passed in a provider-managed Modal
@@ -91,6 +94,7 @@ The default BiRefNet artifact authority is documented in
 GET  /images/capabilities
 POST /images/process
 POST /images/remove-background
+POST /images/segment
 ```
 
 All image endpoints require an authenticated active user.
@@ -104,6 +108,13 @@ PNG or WebP. Omitting `background` returns transparent output;
 libvips. Optional parameters: `feather` (0–20), `format` (`png`/`webp`), and
 `quality` (1–100). The default foreground-mask provider in this endpoint is
 BiRefNet.
+
+`POST /images/segment` accepts JPEG, PNG, or WebP input plus exactly one JSON
+prompt. A point prompt uses `{"type":"point","x":...,"y":...,"label":0|1}`;
+a box prompt uses `{"type":"box","x0":...,"y0":...,"x1":...,"y1":...}`. The response is a
+single-band binary PNG mask at the autorotated source-image geometry. The
+endpoint uses MobileSAM encoder + prompt-mask decoder ONNX sessions cached once
+per process, with one encoder inference and one decoder inference per request.
 
 AI is fail-closed: when `IMAGE_AI_ENABLED` is not `true`, the endpoint returns
 `503 AI model is unavailable`.
@@ -134,7 +145,7 @@ documented separately in
 
 This repository does not establish a hosted production deployment, a live
 public endpoint, or an image registry artifact. Deployment is a separate
-follow-up activity outside the v1.0.0 source release scope.
+follow-up activity outside the source-release scope.
 
 ## License
 

@@ -11,27 +11,29 @@ Rails 8 API có xác thực cho xử lý ảnh xác định và xử lý ảnh A
 - AI remove-background chạy BiRefNet local qua ONNX Runtime CPU backend bên
   trong Ruby, tạo foreground mask để libvips thực hiện composition.
 
-`v1.0.0` là public source release đầu tiên của project. Xem
+`v1.0.0` là public source release đầu tiên của project và bao gồm cả API
+background-removal bằng BiRefNet lẫn API segmentation bằng MobileSAM. Xem
 [`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) cho
-scope đã accept và [`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.vi.md)
-cho qualification chạy CPU đằng sau release này.
+scope đầy đủ đã được accept.
 
 ## Trạng thái project
 
-`v1.0.0` được công bố là public community source release.
+`v1.0.0` là public community source release đầu tiên của project.
 
 - Baseline Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack và
   security hiện có là nền tảng xác thực.
 - `GET /images/capabilities` và authenticated multipart `POST /images/process`
   xử lý JPEG, PNG và WebP bằng libvips với giới hạn input/output/resource
   tường minh.
-- Authenticated `POST /images/remove-background` là public AI background
-  removal contract. AI fail-closed và chỉ được bật khi đặt
-  `IMAGE_AI_ENABLED=true`.
-- Model ONNX BiRefNet không được commit vào Git. Provenance, filename, tensor
-  contract, dung lượng và SHA-256 authority được pin trong
-  [`config/models/birefnet.yml`](config/models/birefnet.yml) và kiểm tra
-  trước khi load runtime.
+- Authenticated `POST /images/remove-background` là AI background-removal
+  contract.
+- Authenticated `POST /images/segment` là MobileSAM prompt-segmentation
+  contract. Endpoint nhận đúng một point hoặc box prompt và trả binary PNG mask
+  theo kích thước ảnh nguồn.
+- AI fail-closed và chỉ được bật khi đặt `IMAGE_AI_ENABLED=true`.
+- Artifact ONNX của BiRefNet và MobileSAM không được commit vào Git.
+  Provenance, filename, tensor contract, dung lượng và SHA-256 authority được
+  pin trong `config/models/` và kiểm tra trước khi load runtime.
 - Python không thuộc production inference. Ruby/Vips xử lý preprocessing và
   composition; ONNX Runtime CPU backend thực hiện model inference.
 - Một CPU runtime qualification chính thức đã PASS trong provider-managed
@@ -88,6 +90,7 @@ Artifact authority mặc định của BiRefNet được mô tả tại
 GET  /images/capabilities
 POST /images/process
 POST /images/remove-background
+POST /images/segment
 ```
 
 Tất cả image endpoint đều yêu cầu authenticated active user.
@@ -100,6 +103,13 @@ WebP. Không truyền `background` sẽ trả ảnh trong suốt; `background=#R
 dùng libvips để composite nền màu xác định. Tham số tùy chọn: `feather`
 (0–20), `format` (`png`/`webp`) và `quality` (1–100). Mask provider mặc định
 của endpoint này là BiRefNet.
+
+`POST /images/segment` nhận JPEG, PNG hoặc WebP cùng đúng một JSON prompt.
+Point prompt dùng `{"type":"point","x":...,"y":...,"label":0|1}`; box prompt
+dùng `{"type":"box","x0":...,"y0":...,"x1":...,"y1":...}`. Response là
+single-band binary PNG mask theo geometry của ảnh nguồn sau autorotate.
+MobileSAM encoder và prompt-mask decoder ONNX session được cache một lần mỗi
+process; mỗi request chạy một encoder inference và một decoder inference.
 
 AI fail-closed: khi `IMAGE_AI_ENABLED` không phải `true`, endpoint trả về
 `503 AI model is unavailable`.
@@ -129,7 +139,7 @@ BiRefNet quality validation và CPU runtime qualification 8-GiB được mô t�
 
 Repository này không thiết lập hosted production deployment, live public
 endpoint hoặc image registry artifact. Deployment là hoạt động riêng sau này,
-ngoài scope của v1.0.0 source release.
+ngoài scope của source release.
 
 ## License
 
