@@ -5,19 +5,43 @@
 
 > Language: **English** | [Tiếng Việt](README.vi.md)
 
-An authenticated Rails 8 API for deterministic image manipulation and lightweight CPU-only AI-assisted image processing. Deterministic transforms use direct `ruby-vips`/libvips. U²-NetP inference runs locally through ONNX Runtime and produces a foreground mask that libvips uses for background removal.
+An authenticated Rails 8 API for deterministic image manipulation and
+lightweight CPU-only AI-assisted image processing.
+
+- Deterministic transforms use direct `ruby-vips`/libvips operations.
+- AI background removal runs BiRefNet locally through the ONNX Runtime CPU
+  backend inside Ruby and produces a foreground mask that libvips uses for
+  composition.
+
+`v1.0.0` is this project's first public source release. See
+[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) for
+the accepted scope and [`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.md)
+for the CPU runtime qualification behind it.
 
 ## Project status
 
-The project is intentionally **pre-1.0** while the AI and deployment qualification gates are completed.
+`v1.0.0` is declared as a public community source release.
 
-- Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack, and the existing security baseline remain in place.
-- `GET /images/capabilities` and authenticated multipart `POST /images/process` provide deterministic JPEG, PNG, and WebP processing with explicit input/output/resource limits.
-- Authenticated `POST /images/remove-background` provides the public U²-NetP background-removal contract. AI is fail-closed and must be explicitly enabled with `IMAGE_AI_ENABLED=true`.
-- The U²-NetP ONNX model is not committed to Git. Its provenance, conversion recipe, filename, tensor contract, and SHA-256 authority are pinned and verified before runtime loading.
-- Python is not part of production inference. Ruby/Vips performs preprocessing and composition; ONNX Runtime CPU performs model inference.
-- Real-model segmentation-quality evidence and the CPU/8 GiB runtime qualification remain explicit release gates. Their harnesses are committed, but this source tree does not claim those gates have been observed as PASS.
-- No production deployment or GHCR artifact is implied by the source repository.
+- Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack, and the
+  existing security baseline are the authentication foundation.
+- `GET /images/capabilities` and authenticated multipart `POST /images/process`
+  provide deterministic JPEG, PNG, and WebP processing with explicit
+  input/output/resource limits.
+- Authenticated `POST /images/remove-background` is the public AI background
+  removal contract. AI is fail-closed and must be explicitly enabled with
+  `IMAGE_AI_ENABLED=true`.
+- The BiRefNet ONNX model is not committed to Git. Its provenance, filename,
+  tensor contract, byte size, and SHA-256 authority are pinned in
+  [`config/models/birefnet.yml`](config/models/birefnet.yml) and verified
+  before runtime loading.
+- Python is not part of production inference. Ruby/Vips performs preprocessing
+  and composition; the ONNX Runtime CPU backend performs model inference.
+- A formal CPU runtime qualification passed in a provider-managed Modal
+  Function container configured with an 8192 MiB memory request and 8192 MiB
+  hard limit. This is a capacity qualification, not a production-traffic or
+  SLA claim. See [`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.md).
+- No production deployment, hosted public endpoint, or GHCR artifact is
+  implied by this source repository.
 
 The `image_processing` gem is intentionally not part of this architecture.
 
@@ -27,7 +51,10 @@ This project started from a source snapshot of:
 
 https://github.com/dangkhoa2016/Rails-8-API-Authentication
 
-The source snapshot was imported as a single root commit. Development, versioning, release, CI, and deployment authority are independent in this repository. Historical upstream records under [`docs/history/`](docs/history/) are retained for attribution only.
+The source snapshot was imported as a single root commit. Development,
+versioning, release, CI, and deployment authority are independent in this
+repository. Historical upstream records under [`docs/history/`](docs/history/)
+are retained for attribution only.
 
 ## Local development
 
@@ -46,13 +73,17 @@ bundle install
 bin/rails db:prepare
 ```
 
-For deterministic image processing, no AI model is required. For local U²-NetP inference, install the checksum-qualified model using the provenance workflow and then opt in explicitly:
+For deterministic image processing, no AI model is required. For local BiRefNet
+inference, install the checksum-qualified model using the provenance workflow
+and then opt in explicitly:
 
 ```bash
+script/models/fetch_birefnet
 IMAGE_AI_ENABLED=true bin/dev
 ```
 
-The default U²-NetP artifact authority is documented in [`docs/U2NETP_MODEL_PROVENANCE.md`](docs/U2NETP_MODEL_PROVENANCE.md).
+The default BiRefNet artifact authority is documented in
+[`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.md).
 
 ## Public image endpoints
 
@@ -64,7 +95,18 @@ POST /images/remove-background
 
 All image endpoints require an authenticated active user.
 
-`POST /images/remove-background` accepts JPEG, PNG, or WebP input and returns PNG or WebP. Omitting `background` returns transparent output; `background=#RRGGBB` performs deterministic solid-background composition with libvips.
+`POST /images/process` is the deterministic Vips pipeline. It requires an
+`operations` parameter and accepts JPEG, PNG, or WebP input.
+
+`POST /images/remove-background` accepts JPEG, PNG, or WebP input and returns
+PNG or WebP. Omitting `background` returns transparent output;
+`background=#RRGGBB` performs deterministic solid-background composition with
+libvips. Optional parameters: `feather` (0–20), `format` (`png`/`webp`), and
+`quality` (1–100). The default foreground-mask provider in this endpoint is
+BiRefNet.
+
+AI is fail-closed: when `IMAGE_AI_ENABLED` is not `true`, the endpoint returns
+`503 AI model is unavailable`.
 
 ## Verification
 
@@ -74,24 +116,25 @@ bin/rubocop
 bin/brakeman --no-pager
 ```
 
-Real-model quality and 8 GiB CPU qualification use separate fail-closed harnesses documented below; their presence is not itself PASS evidence.
+BiRefNet quality validation and the 8-GiB CPU runtime qualification are
+documented separately in
+[`docs/BIREFNET_CPU_QUALIFICATION.md`](docs/BIREFNET_CPU_QUALIFICATION.md).
 
 ## Documentation
 
 - [Documentation index](docs/README.md)
 - [Image processing contract](docs/IMAGE_PROCESSING_CONTRACT.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
-- [U²-NetP model provenance](docs/U2NETP_MODEL_PROVENANCE.md)
-- [U²-NetP preprocessing](docs/U2NETP_PREPROCESSING.md)
-- [U²-NetP CPU inference](docs/U2NETP_INFERENCE.md)
-- [U²-NetP background removal](docs/U2NETP_BACKGROUND_REMOVAL.md)
-- [U²-NetP CPU / 8 GiB qualification](docs/benchmarks/u2netp-cpu-8gb.md)
+- [BiRefNet CPU qualification](docs/BIREFNET_CPU_QUALIFICATION.md)
+- [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Release roadmap](docs/RELEASE_PROCESS.md)
 - [Project changelog](CHANGELOG.md)
 
 ## Deployment
 
-No production deployment, image registry artifact, or public endpoint is established by this source tree. Deployment qualification is a later gate after local AI quality/resource qualification.
+This repository does not establish a hosted production deployment, a live
+public endpoint, or an image registry artifact. Deployment is a separate
+follow-up activity outside the v1.0.0 source release scope.
 
 ## License
 
