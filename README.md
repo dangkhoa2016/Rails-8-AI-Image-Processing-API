@@ -13,15 +13,14 @@ lightweight CPU-only AI-assisted image processing.
   backend inside Ruby and produces a foreground mask that libvips uses for
   composition.
 
-`v1.0.0` is this project's first public source release. `v1.1.0` adds the
-MobileSAM segmentation API. See
-[`docs/releases/v1.1.0-acceptance.md`](docs/releases/v1.1.0-acceptance.md) for
-the new release scope, while the immutable `v1.0.0` record remains at
-[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md).
+`v1.0.0` is this project's first public source release and includes both the
+BiRefNet background-removal API and MobileSAM segmentation API. See
+[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) for
+the complete accepted scope.
 
 ## Project status
 
-`v1.1.0` is the current source-release candidate; `v1.0.0` remains the immutable first public community source release.
+`v1.0.0` is the project's first public community source release.
 
 - Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack, and the
   existing security baseline are the authentication foundation.
@@ -138,7 +137,6 @@ documented separately in
 - [Image processing contract](docs/IMAGE_PROCESSING_CONTRACT.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [BiRefNet CPU qualification](docs/BIREFNET_CPU_QUALIFICATION.md)
-- [v1.1.0 acceptance record](docs/releases/v1.1.0-acceptance.md)
 - [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Release roadmap](docs/RELEASE_PROCESS.md)
 - [Project changelog](CHANGELOG.md)
