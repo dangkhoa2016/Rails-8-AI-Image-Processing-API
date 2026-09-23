@@ -36,7 +36,7 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
         "request_content_type" => "multipart/form-data",
         "response_content_type" => "image/png",
         "response_content_types" => %w[image/png image/jpeg image/webp],
-        "ai_operations" => %w[remove_background],
+        "ai_operations" => %w[remove_background segment],
         "ai_enabled" => false
       },
       json_response
@@ -51,6 +51,52 @@ class ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "image/png", json_response.fetch("response_content_type")
   end
 
+
+  test "segmentation requires authentication" do
+    post "/images/segment", params: {
+      image: tiny_png_upload,
+      prompt: '{"type":"point","x":0,"y":0,"label":1}'
+    }
+
+    assert_response :unauthorized
+  end
+
+  test "segmentation returns a PNG mask with metadata" do
+    mask = Vips::Image.black(1, 1).cast(:uchar)
+
+    with_env("IMAGE_AI_ENABLED" => "true") do
+      ImageLab::AI::MobileSam.stub(:call, mask) do
+        post "/images/segment", params: {
+          image: tiny_png_upload,
+          prompt: '{"type":"point","x":0,"y":0,"label":1}'
+        }, headers: authenticated_headers
+      end
+    end
+
+    assert_response :success
+    assert_equal "image/png", response.media_type
+    assert_equal "1", response.headers.fetch("X-Image-Width")
+    assert_equal "1", response.headers.fetch("X-Image-Height")
+    assert_equal "png", response.headers.fetch("X-Image-Format")
+    assert_equal "no-store", response.headers.fetch("Cache-Control")
+  end
+
+  test "segmentation rejects malformed prompt JSON and non-mask output" do
+    post "/images/segment", params: { image: tiny_png_upload, prompt: "{" }, headers: authenticated_headers
+    assert_response :unprocessable_entity
+
+    mask = Vips::Image.black(1, 1).cast(:uchar)
+    ImageLab::AI::MobileSam.stub(:call, mask) do
+      post "/images/segment", params: {
+        image: tiny_png_upload,
+        prompt: '{"type":"point","x":0,"y":0,"label":1}',
+        output: "overlay"
+      }, headers: authenticated_headers
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "segmentation output must be mask", json_response.fetch("error")
+  end
 
   test "background removal requires authentication" do
     post "/images/remove-background", params: { image: tiny_png_upload }
