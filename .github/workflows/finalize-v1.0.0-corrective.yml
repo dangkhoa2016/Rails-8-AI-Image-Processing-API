@@ -1,0 +1,177 @@
+name: Finalize v1.0.0 Corrective Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    env:
+      OLD_TAG_TARGET: 72679a257def5828efe6373d591fe44f7f90c301
+      RELEASE_ID: '390829881'
+      FINAL_ASSET: rails8-ai-v1.0.0-final-corrective-evidence-2026-09-23.tar.gz
+
+    steps:
+      - name: Checkout exact qualified main commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Verify corrective preconditions
+        id: gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          MAIN_SHA="$(git ls-remote origin refs/heads/main | awk '{print $1}')"
+          CURRENT_TAG_TARGET="$(git ls-remote origin 'refs/tags/v1.0.0^{}' | awk '{print $1}')"
+
+          test "$MAIN_SHA" = "$TARGET_SHA"
+
+          if [[ "$CURRENT_TAG_TARGET" = "$TARGET_SHA" ]]; then
+            echo 'mode=already-finalized' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$CURRENT_TAG_TARGET" != "$OLD_TAG_TARGET" ]]; then
+            echo "v1.0.0 no longer points to the expected pre-corrective target; corrective is closed or state changed."
+            echo 'mode=noop' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git ls-remote --tags origin | grep -Eq 'refs/tags/v1\.[1-9][0-9]*\.'; then
+            echo 'Unexpected later-version public tag detected; refusing corrective retag.' >&2
+            exit 1
+          fi
+
+          echo 'mode=correct' >> "$GITHUB_OUTPUT"
+
+      - name: Create final annotated v1.0.0 tag
+        if: steps.gate.outputs.mode == 'correct'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          git config user.name 'Đăng Khoa'
+          git config user.email 'i.am@dangkhoa.dev'
+
+          cat > /tmp/v1.0.0-tag-message.txt <<'EOF'
+          v1.0.0 - Rails 8 AI Image Processing API
+
+          - First public community source release.
+          - Includes BiRefNet background removal and MobileSAM prompt segmentation.
+          - Final source passed exact-main CI and production Docker cold-build.
+          - GHCR publication and production deployment remain separate authorities.
+          EOF
+
+          git tag -d v1.0.0 2>/dev/null || true
+          git tag -a v1.0.0 "$TARGET_SHA" -F /tmp/v1.0.0-tag-message.txt
+          git push origin :refs/tags/v1.0.0
+          git push origin refs/tags/v1.0.0
+
+      - name: Build final corrective evidence
+        if: steps.gate.outputs.mode == 'correct'
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          TREE_SHA="$(git rev-parse "${TARGET_SHA}^{tree}")"
+          TAG_OBJECT="$(git rev-parse v1.0.0)"
+          TAG_TARGET="$(git rev-parse 'v1.0.0^{}')"
+          RUN_ID='${{ github.event.workflow_run.id }}'
+
+          test "$TAG_TARGET" = "$TARGET_SHA"
+
+          mkdir -p final-v1.0.0-evidence
+          cp docs/releases/v1.0.0-acceptance.md final-v1.0.0-evidence/
+          cat > final-v1.0.0-evidence/FINAL-CORRECTIVE-REPORT.txt <<EOF
+          FINAL_PUBLICATION_REVIEW=PASS
+          PUBLIC_VERSION=v1.0.0
+          FINAL_MAIN_SHA=$TARGET_SHA
+          FINAL_TREE_SHA=$TREE_SHA
+          FINAL_CI_RUN_ID=$RUN_ID
+          FINAL_TAG_OBJECT=$TAG_OBJECT
+          FINAL_TAG_TARGET=$TAG_TARGET
+          MOBILE_SAM_INCLUDED=YES
+          BIREFNET_INCLUDED=YES
+          DOCKER_COLD_BUILD=PASS
+          GHCR_PUBLISHED=NO
+          PRODUCTION_DEPLOYED=NO
+          EOF
+
+          find final-v1.0.0-evidence -type f -print0 | sort -z | xargs -0 sha256sum > final-v1.0.0-evidence/SHA256SUMS
+          tar -czf "$FINAL_ASSET" final-v1.0.0-evidence
+          sha256sum "$FINAL_ASSET" > "$FINAL_ASSET.sha256"
+
+          echo "tree_sha=$TREE_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag_object=$TAG_OBJECT" >> "$GITHUB_OUTPUT"
+
+      - name: Render final release notes
+        if: steps.gate.outputs.mode == 'correct'
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          TREE_SHA='${{ steps.evidence.outputs.tree_sha }}'
+          TAG_OBJECT='${{ steps.evidence.outputs.tag_object }}'
+          RUN_ID='${{ github.event.workflow_run.id }}'
+
+          sed \
+            -e "s/__FINAL_MAIN_SHA__/$TARGET_SHA/g" \
+            -e "s/__FINAL_TREE_SHA__/$TREE_SHA/g" \
+            -e "s/__FINAL_TAG_OBJECT__/$TAG_OBJECT/g" \
+            -e "s/__FINAL_CI_RUN_ID__/$RUN_ID/g" \
+            .github/release/v1.0.0-final-notes.md > /tmp/v1.0.0-release-notes.md
+
+      - name: Update existing GitHub Release and replace public evidence
+        if: steps.gate.outputs.mode == 'correct'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+
+          gh api --method PATCH \
+            "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" \
+            -f tag_name='v1.0.0' \
+            -f target_commitish="$TARGET_SHA" \
+            -f name='v1.0.0' \
+            -F draft=false \
+            -F prerelease=false \
+            --raw-field body="$(cat /tmp/v1.0.0-release-notes.md)" >/tmp/release.json
+
+          gh release delete-asset v1.0.0 rails8-ai-v1.0.0-public-evidence-2026-09-22.tar.gz -y || true
+          gh release delete-asset v1.0.0 rails8-ai-v1.0.0-public-evidence-2026-09-22.tar.gz.sha256 -y || true
+          gh release upload v1.0.0 "$FINAL_ASSET" "$FINAL_ASSET.sha256" --clobber
+
+      - name: Verify final public authority
+        if: steps.gate.outputs.mode == 'correct'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA='${{ github.event.workflow_run.head_sha }}'
+          REMOTE_TAG_TARGET="$(git ls-remote origin 'refs/tags/v1.0.0^{}' | awk '{print $1}')"
+          test "$REMOTE_TAG_TARGET" = "$TARGET_SHA"
+
+          RELEASE_TAG="$(gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" --jq .tag_name)"
+          test "$RELEASE_TAG" = 'v1.0.0'
+
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --jq '.[].name' | grep -Fx "$FINAL_ASSET"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets" --jq '.[].name' | grep -Fx "$FINAL_ASSET.sha256"
+
+          echo "FINAL_V1_0_0_PUBLICATION=PASS"
