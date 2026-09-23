@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.1.0 — 2026-09-23
+
+`v1.1.0` adds authenticated MobileSAM prompt segmentation while preserving the
+existing deterministic image-processing and BiRefNet background-removal
+contracts.
+
+- Added authenticated `POST /images/segment` with exactly one point or box
+  prompt per request and a source-sized binary PNG mask response.
+- Added checksum-pinned MobileSAM encoder and prompt-mask decoder ONNX
+  authorities with exact filename, byte-size, SHA-256, and port-contract
+  verification before model loading.
+- Added process-cached MobileSAM sessions, M2-authoritative preprocessing and
+  prompt-coordinate transforms, point-token IoU selection, and box-token
+  selection.
+- Added ordinary stubbed controller/service coverage plus opt-in real-model
+  canonical parity tests.
+- Canonical M2 parity passed for preprocessing, encoder embedding, decoder
+  masks, IoU predictions, low-resolution masks, positive-point output, and box
+  output. The positive-point and box binary masks were pixel-identical to the
+  accepted M2 evidence.
+- A real authenticated multipart endpoint qualification passed in an ephemeral
+  Modal CPU Function configured with 2 vCPU, a 10240 MiB memory request and
+  hard limit, `WEB_CONCURRENCY=1`, and `IMAGE_AI_MAX_CONCURRENCY=1`.
+  `/usr/bin/time -v` reported 773432 KiB (755.30 MiB) maximum RSS for that
+  endpoint test process. This is qualification evidence for the tested
+  workload, not a production-traffic, concurrency, throughput, or SLA claim.
+- `v1.0.0` remains immutable; this release is normal forward history and does
+  not move or rewrite the first public release.
+
 ## v1.0.0 — 2026-09-22
 
 `v1.0.0` is the first public community source release of this project. The
