@@ -11,15 +11,14 @@ Rails 8 API có xác thực cho xử lý ảnh xác định và xử lý ảnh A
 - AI remove-background chạy BiRefNet local qua ONNX Runtime CPU backend bên
   trong Ruby, tạo foreground mask để libvips thực hiện composition.
 
-`v1.0.0` là public source release đầu tiên của project. `v1.1.0` bổ sung API
-segment bằng MobileSAM. Xem
-[`docs/releases/v1.1.0-acceptance.md`](docs/releases/v1.1.0-acceptance.md) cho
-scope release mới; record bất biến của `v1.0.0` vẫn ở
-[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md).
+`v1.0.0` là public source release đầu tiên của project và bao gồm cả API
+background-removal bằng BiRefNet lẫn API segmentation bằng MobileSAM. Xem
+[`docs/releases/v1.0.0-acceptance.md`](docs/releases/v1.0.0-acceptance.md) cho
+scope đầy đủ đã được accept.
 
 ## Trạng thái project
 
-`v1.1.0` là source-release candidate hiện tại; `v1.0.0` vẫn là public community source release đầu tiên và bất biến.
+`v1.0.0` là public community source release đầu tiên của project.
 
 - Baseline Devise, JWT, refresh-token rotation, PostgreSQL, Rack::Attack và
   security hiện có là nền tảng xác thực.
@@ -132,7 +131,6 @@ BiRefNet quality validation và CPU runtime qualification 8-GiB được mô t�
 - [Image processing contract](docs/IMAGE_PROCESSING_CONTRACT.md)
 - [ONNX Runtime feasibility](docs/ONNX_RUNTIME_FEASIBILITY.md)
 - [BiRefNet CPU qualification](docs/BIREFNET_CPU_QUALIFICATION.vi.md)
-- [v1.1.0 acceptance record](docs/releases/v1.1.0-acceptance.md)
 - [v1.0.0 acceptance record](docs/releases/v1.0.0-acceptance.md)
 - [Lộ trình release](docs/RELEASE_PROCESS.vi.md)
 - [Changelog project](CHANGELOG.md)

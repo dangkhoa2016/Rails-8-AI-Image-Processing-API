@@ -29,7 +29,6 @@
 
 ## Releases
 
-- [v1.1.0 acceptance record](releases/v1.1.0-acceptance.md)
 - [v1.0.0 acceptance record](releases/v1.0.0-acceptance.md)
 
 ## Project operations
