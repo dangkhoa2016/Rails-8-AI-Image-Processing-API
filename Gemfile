@@ -3,7 +3,7 @@ source "https://rubygems.org"
 ruby_version = Gem::Version.new(RUBY_VERSION)
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.1.3"
+gem "rails", "~> 8.1.4"
 # Rails 8.1.3.1 is incompatible with json 3.0's keyword-argument API and can
 # turn otherwise valid JSON request bodies into HTTP 400 responses. Upstream
 # Rails has a fix, but no released Rails version contains it yet. Remove this
