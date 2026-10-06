@@ -10,7 +10,7 @@ gem "rails", "~> 8.1.3"
 # pin after upgrading to a Rails release with JSON 3.0 compatibility.
 gem "json", "< 3.0"
 # Use PostgreSQL as the database for Active Record
-gem "pg", "~> 1.6"
+gem "pg", "~> 1.7"
 gem "ruby-vips", "~> 2.3"
 gem "onnxruntime", "~> 0.11.6"
 # Use the Puma web server [https://github.com/puma/puma]
